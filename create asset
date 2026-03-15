@@ -84,7 +84,7 @@ local rLeg = createPart("Right Leg", Vector3.new(1, 2, 1), CFrame.new(0.5, -2, 0
 local ring = Instance.new("Part")
 ring.Name = "RangeRing"
 ring.Shape = Enum.PartType.Cylinder
-ring.Size = Vector3.new(0.2, 50, 50) -- Range is 25, so diameter is 50
+ring.Size = Vector3.new(0.2, 36, 36) -- Range is 18, so diameter is 36
 ring.Transparency = 0.8
 ring.Color = Color3.fromRGB(0, 170, 255)
 ring.Material = Enum.Material.Neon
@@ -99,18 +99,32 @@ print("NOOB BUILT! Your defender is ready for orders.")
 
 
 -- strong noob and fastnoob
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local towers = ReplicatedStorage:WaitForChild("Towers")
 local basic = towers:WaitForChild("BasicTower")
 
+-- 1. Create FastNoob (Low Damage, Super Fast)
 local fast = basic:Clone()
 fast.Name = "FastNoob"
-fast.Torso.Color = Color3.fromRGB(255, 100, 100) -- Red Torso
+fast.Torso.Color = Color3.fromRGB(255, 100, 100)
+local fScript = fast:FindFirstChild("AttackRoutine") or fast:FindFirstChildOfClass("Script")
+if fScript then
+    fScript.Source = fScript.Source:gsub("local baseDamage = 25", "local baseDamage = 15")
+    fScript.Source = fScript.Source:gsub("local range = 18", "local range = 15")
+    fScript.Source = fScript.Source:gsub("local attackSpeed = 0.8", "local attackSpeed = 0.35")
+end
 fast.Parent = towers
 
+-- 2. Create StrongNoob (High Damage, Slow)
 local strong = basic:Clone()
 strong.Name = "StrongNoob"
-strong.Torso.Color = Color3.fromRGB(100, 100, 100) -- Grey Torso
+strong.Torso.Color = Color3.fromRGB(100, 100, 100)
+local sScript = strong:FindFirstChild("AttackRoutine") or strong:FindFirstChildOfClass("Script")
+if sScript then
+    sScript.Source = sScript.Source:gsub("local baseDamage = 25", "local baseDamage = 55")
+    sScript.Source = sScript.Source:gsub("local range = 18", "local range = 25")
+    sScript.Source = sScript.Source:gsub("local attackSpeed = 0.8", "local attackSpeed = 1.6")
+end
 strong.Parent = towers
-print("Gacha Variants Created!")
+
+print("Gacha Variants Created with UNIQUE STATS! Fast: 0.35s / Strong: 55 Dmg")

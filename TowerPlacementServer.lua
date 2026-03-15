@@ -20,8 +20,10 @@ end
 local towerFolder = ReplicatedStorage:WaitForChild("Towers")
 
 -- When the client asks to place a tower, this function runs
-placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition)
+placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition, damageMultiplier)
 	-- Ensure the player actually has enough money!
+    damageMultiplier = damageMultiplier or 1 -- Default to 1 if not provided
+
 	local leaderstats = player:FindFirstChild("leaderstats")
 	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
 	local towerCost = 100
@@ -48,8 +50,9 @@ placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition)
 		
 		newTower:PivotTo(finalCFrame)
 		
-		-- NEW: Set the initial level for upgrades
+		-- NEW: Set the initial level and randomized multiplier for upgrades
 		newTower:SetAttribute("Level", 1)
+        newTower:SetAttribute("DamageMultiplier", damageMultiplier)
 		
 		-- Put it in the Towers folder so everyone can see it and it can be cleared easily!
 		newTower.Parent = workspaceTowers
@@ -96,6 +99,11 @@ local AVAILABLE_TOWERS = {"BasicTower", "FastNoob", "StrongNoob"} -- These must 
 local ROLL_COST = 50
 
 rollFunction.OnServerInvoke = function(player)
+	-- RESTRICTION: Only roll in Lobby
+	if _G.GamePhase and _G.GamePhase ~= "Lobby" then
+		return nil
+	end
+	
 	local leaderstats = player:FindFirstChild("leaderstats")
 	local pt = leaderstats and leaderstats:FindFirstChild("PT")
 	
@@ -106,8 +114,11 @@ rollFunction.OnServerInvoke = function(player)
 		local randomIndex = math.random(1, #AVAILABLE_TOWERS)
 		local reward = AVAILABLE_TOWERS[randomIndex]
 		
-		print(player.Name .. " rolled and got: " .. reward)
-		return reward
+		-- RANDOMIZED STATS: 0.8 to 1.5
+		local multiplier = math.floor((0.8 + math.random() * 0.7) * 100) / 100
+		
+		print(player.Name .. " rolled " .. reward .. " with x" .. multiplier .. " damage!")
+		return {name = reward, multiplier = multiplier}
 	else
 		return nil -- Not enough PT
 	end

@@ -138,7 +138,7 @@ local barFrame = Instance.new("Frame")
 barFrame.Name = "TowerBar"
 barFrame.Size = UDim2.new(0, 500, 0, 80)
 barFrame.AnchorPoint = Vector2.new(0.5, 1)
-barFrame.Position = UDim2.new(0.5, 0, 1, -150)
+barFrame.Position = UDim2.new(0.5, 0, 1, -220) -- Move it higher to avoid overlap with PT display
 barFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 barFrame.BackgroundTransparency = 0.4
 barFrame.Parent = screenGui
@@ -155,11 +155,11 @@ layout.Padding = UDim.new(0, 10)
 layout.Parent = barFrame
 
 local towerInventory = {
-    {name = "BasicTower", icon = "Noob", cost = 100},
-    {name = "Locked", icon = "?", cost = 0},
-    {name = "Locked", icon = "?", cost = 0},
-    {name = "Locked", icon = "?", cost = 0},
-    {name = "Locked", icon = "?", cost = 0},
+    {name = "BasicTower", icon = "Noob", cost = 100, multiplier = 1},
+    {name = "Locked", icon = "?", cost = 0, multiplier = 1},
+    {name = "Locked", icon = "?", cost = 0, multiplier = 1},
+    {name = "Locked", icon = "?", cost = 0, multiplier = 1},
+    {name = "Locked", icon = "?", cost = 0, multiplier = 1},
 }
 
 for i, data in ipairs(towerInventory) do
@@ -170,7 +170,7 @@ for i, data in ipairs(towerInventory) do
     slot.TextColor3 = Color3.fromRGB(255, 255, 255)
     slot.TextSize = 14
     slot.Font = Enum.Font.FredokaOne
-    slot.Text = data.icon .. "\n$" .. data.cost
+    slot.Text = data.icon .. " (x" .. data.multiplier .. ")\n$" .. data.cost
     
     if data.name == "Locked" then
         slot.Text = "Locked"
@@ -184,7 +184,7 @@ for i, data in ipairs(towerInventory) do
     
     slot.MouseButton1Click:Connect(function()
         if data.name ~= "Locked" then
-            selectEvent:Fire(data.name)
+            selectEvent:Fire(data.name, data.multiplier)
         end
     end)
     
@@ -213,21 +213,24 @@ rollCorner.CornerRadius = UDim.new(0, 8)
 rollCorner.Parent = rollButton
 
 rollButton.MouseButton1Click:Connect(function()
-    local newTower = rollFunction:InvokeServer()
-    if newTower then
-        print("GACHA: Unlocked " .. newTower)
+    local result = rollFunction:InvokeServer()
+    if result then
+        local newTower = result.name
+        local mult = result.multiplier
+        print("GACHA: Unlocked " .. newTower .. " with x" .. mult)
         
         -- Find first locked slot to replace
         for i, data in ipairs(towerInventory) do
             if data.name == "Locked" then
                 data.name = newTower
-                data.icon = newTower:sub(1,1) .. " Noob" -- Simple icon
-                data.cost = 150 -- Default price for new ones
+                data.multiplier = mult
+                data.icon = newTower:sub(1,1) .. " Noob"
+                data.cost = 150
                 
                 -- Update the button text
                 local button = barFrame:FindFirstChild("Slot" .. i)
                 if button then
-                    button.Text = data.icon .. "\n$" .. data.cost
+                    button.Text = data.icon .. " (x" .. data.multiplier .. ")\n$" .. data.cost
                     button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                     button.BackgroundTransparency = 0
                 end
@@ -235,8 +238,8 @@ rollButton.MouseButton1Click:Connect(function()
             end
         end
     else
-        print("GACHA: Not enough PT or error!")
-        rollButton.Text = "NOT ENOUGH PT"
+        print("GACHA: Not enough PT or currently in Combat!")
+        rollButton.Text = "LOBBY ONLY"
         task.wait(1)
         rollButton.Text = "🎲 ROLL (50 PT)"
     end

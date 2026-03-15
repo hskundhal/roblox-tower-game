@@ -13,10 +13,11 @@ local selectEvent = ReplicatedStorage:WaitForChild("SelectTowerEvent")
 
 -- Tower State
 local selectedTowerName = nil
+local selectedMultiplier = 1
 local towerFolder = ReplicatedStorage:WaitForChild("Towers")
 local previewModel = nil
 local rangePreview = nil
-local TOWER_RANGE = 25 -- Default range
+local TOWER_RANGE = 18 -- REDUCED RANGE
 
 -- 1. Function to clear current preview
 local function clearPreview()
@@ -25,13 +26,16 @@ local function clearPreview()
     previewModel = nil
     rangePreview = nil
     selectedTowerName = nil
+    selectedMultiplier = 1
 end
 
 -- 2. Function to create the Previews (Ghost & Range Ring)
-local function createPreview(towerName)
+local function createPreview(towerName, multiplier)
     clearPreview() -- Clear any existing one
     
     selectedTowerName = towerName
+    selectedMultiplier = multiplier or 1
+    
     local towerModel = towerFolder:FindFirstChild(towerName)
     if not towerModel then return end
     
@@ -50,9 +54,9 @@ local function createPreview(towerName)
     rangePreview = Instance.new("Part")
     rangePreview.Name = "RangePreview"
     rangePreview.Shape = Enum.PartType.Cylinder
-    rangePreview.Size = Vector3.new(0.2, TOWER_RANGE * 2, TOWER_RANGE * 2)
+    rangePreview.Size = Vector3.new(0.2, 36, 36) -- Range is 18, so diameter is 36
     rangePreview.Transparency = 0.7
-    rangePreview.Color = Color3.fromRGB(0, 170, 255)
+    rangePreview.Color = Color3.fromRGB(255, 170, 0) -- ORANGE (was blue)
     rangePreview.Material = Enum.Material.Neon
     rangePreview.Anchored = true
     rangePreview.CanCollide = false
@@ -60,11 +64,11 @@ local function createPreview(towerName)
 end
 
 -- 3. Listen for UI Selection
-selectEvent.Event:Connect(function(towerName)
-    if selectedTowerName == towerName then
-        clearPreview() -- Toggle off if clicked again
+selectEvent.Event:Connect(function(towerName, multiplier)
+    if selectedTowerName == towerName and selectedMultiplier == multiplier then
+        clearPreview() -- Toggle off if clicked again exactly
     else
-        createPreview(towerName)
+        createPreview(towerName, multiplier)
     end
 end)
 
@@ -110,10 +114,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
         if previewModel and previewModel.Parent == workspace and selectedTowerName then
             -- Tell server the GROUND position
             local finalPos = previewModel.PrimaryPart.Position - Vector3.new(0, 3, 0)
-            placementEvent:FireServer(selectedTowerName, finalPos)
+            placementEvent:FireServer(selectedTowerName, finalPos, selectedMultiplier)
             
-            -- Keep the ghost active for multi-placement? 
-            -- We'll clear it for now to follow standard TD patterns
+            -- Clear after placement
             clearPreview()
         end
     end

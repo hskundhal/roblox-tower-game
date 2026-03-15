@@ -9,19 +9,21 @@ local head = tower:WaitForChild("Head")
 -- Tower Stats
 local baseDamage = 25 
 local currentDamage = baseDamage
-local range = 25 
+local range = 18 -- REDUCED RANGE (Previously 25)
 local attackSpeed = 0.8 
 
 -- Update damage when level changes
 tower:GetAttributeChangedSignal("Level"):Connect(function()
     local level = tower:GetAttribute("Level") or 1
-    currentDamage = baseDamage + (level - 1) * 5
-    print("UPGRADED: " .. tower.Name .. " is now Level " .. level .. " (Damage: " .. currentDamage .. ")")
+    local multiplier = tower:GetAttribute("DamageMultiplier") or 1
+    currentDamage = (baseDamage + (level - 1) * 5) * multiplier
+    print("UPGRADED: " .. tower.Name .. " Level " .. level .. " | Mult: x" .. multiplier .. " (Damage: " .. currentDamage .. ")")
 end)
 
 -- Initial damage set
 local initialLevel = tower:GetAttribute("Level") or 1
-currentDamage = baseDamage + (initialLevel - 1) * 5
+local initialMult = tower:GetAttribute("DamageMultiplier") or 1
+currentDamage = (baseDamage + (initialLevel - 1) * 5) * initialMult
 -- 1. Create/Find the RangeRing (sitting at the feet)
 local rangeRing = tower:FindFirstChild("RangeRing")
 if not rangeRing then

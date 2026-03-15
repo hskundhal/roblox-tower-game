@@ -11,6 +11,7 @@ local TIME_BETWEEN_WAVES = 10
 
 -- Game Difficulty (1-5)
 _G.Difficulty = 1 
+_G.GamePhase = "Lobby"
 
 
 -- Game State Variables
@@ -163,7 +164,16 @@ end
 
 local function runGame(difficulty)
 	_G.Difficulty = difficulty
+	_G.GamePhase = "Combat"
 	print("--- NEW GAME STARTING AT DIFFICULTY " .. _G.Difficulty .. "! ---")
+	
+	-- Teleport players to Map
+	local mapSpawn = workspace:FindFirstChild("MapSpawn")
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character and mapSpawn then
+			player.Character:PivotTo(mapSpawn.CFrame + Vector3.new(0, 5, 0))
+		end
+	end
 	
 	-- Reset the game variables
 	baseHealth = BASE_HEALTH_MAX
@@ -198,6 +208,16 @@ local function runGame(difficulty)
 	-- If we broke out of the wave loop, the game is over!
 	print("Game Over. Cleaning up...")
 	clearZombiesAndTowers()
+	
+	_G.GamePhase = "Lobby"
+	-- Teleport players back to Lobby
+	local lobbySpawn = workspace:FindFirstChild("LobbySpawn")
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character and lobbySpawn then
+			player.Character:PivotTo(lobbySpawn.CFrame + Vector3.new(0, 5, 0))
+		end
+	end
+	
 	task.wait(3)
 end
 
