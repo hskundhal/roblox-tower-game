@@ -42,10 +42,11 @@ placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition)
 		local newTower = towerToSpawn:Clone()
 		
 		-- Move it to the position the player clicked
-		-- We use the towerToSpawn's existing rotation so it doesn't fall over!
-		local targetCFrame = CFrame.new(targetPosition + Vector3.new(0, newTower.PrimaryPart.Size.Y / 2, 0))
-		-- Combine the new position with the model's saved rotation
-		newTower:PivotTo(targetCFrame * towerToSpawn:GetPivot().Rotation)
+		-- The client already calculated the "ground" position, so we just add the height offset here.
+		local heightOffset = newTower.PrimaryPart.Size.Y / 2
+		local finalCFrame = CFrame.new(targetPosition + Vector3.new(0, heightOffset, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		
+		newTower:PivotTo(finalCFrame)
 		
 		-- Put it in the Towers folder so everyone can see it and it can be cleared easily!
 		newTower.Parent = workspaceTowers

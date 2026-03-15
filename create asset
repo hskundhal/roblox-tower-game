@@ -1,0 +1,44 @@
+-- Copy and Paste this into the Command Bar to build the tower
+local model = Instance.new("Model")
+model.Name = "BasicTower"
+model.Parent = game.ReplicatedStorage.Towers
+
+local base = Instance.new("Part")
+base.Name = "Base"
+base.Size = Vector3.new(1, 6, 6)
+base.Shape = Enum.PartType.Cylinder
+base.Material = Enum.Material.Metal
+base.CFrame = CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.rad(90))
+base.Parent = model
+
+local pillar = Instance.new("Part")
+pillar.Name = "Pillar"
+pillar.Size = Vector3.new(15, 2, 2)
+pillar.Shape = Enum.PartType.Cylinder
+pillar.Material = Enum.Material.Metal
+pillar.CFrame = CFrame.new(0, 8, 0) * CFrame.Angles(0, 0, math.rad(90))
+pillar.Parent = model
+model.PrimaryPart = pillar
+
+local fist = Instance.new("Part")
+fist.Name = "Fist"
+fist.Size = Vector3.new(3, 3, 3)
+fist.Color = Color3.fromRGB(255, 0, 0)
+fist.Material = Enum.Material.Neon
+fist.Anchored = true
+fist.CanCollide = false
+fist.Position = Vector3.new(0, 14, 0)
+fist.Parent = model
+
+local ring = Instance.new("Part")
+ring.Name = "RangeRing"
+ring.Shape = Enum.PartType.Cylinder
+ring.Size = Vector3.new(0.2, 70, 70)
+ring.Transparency = 0.8
+ring.Color = Color3.fromRGB(0, 170, 255)
+ring.Material = Enum.Material.Neon
+ring.Anchored = true
+ring.CanCollide = false
+ring.Parent = model
+
+print("Construction Complete! Your Tall Pole tower is in ReplicatedStorage.Towers")
