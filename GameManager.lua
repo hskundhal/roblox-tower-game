@@ -100,8 +100,14 @@ local function spawnWave(waveNumber)
 		
 		local newZombie = basicZombie:Clone()
 		
-		-- Teleport it to the start of the path!
-		newZombie:PivotTo(spawnPoint.CFrame)
+		-- Teleport it to the start of the path and face the next waypoint!
+		local waypoint2 = waypointsFolder:FindFirstChild("2")
+		if waypoint2 then
+			local lookAtCFrame = CFrame.lookAt(spawnPoint.Position, waypoint2.Position)
+			newZombie:PivotTo(lookAtCFrame)
+		else
+			newZombie:PivotTo(spawnPoint.CFrame)
+		end
 		
 		newZombie.Parent = workspaceEnemies -- Put it in the folder for easy cleanup!
 		
