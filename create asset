@@ -42,3 +42,75 @@ ring.CanCollide = false
 ring.Parent = model
 
 print("Construction Complete! Your Tall Pole tower is in ReplicatedStorage.Towers")
+
+
+
+
+
+-- noob build
+-- Noob-Builder Script
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local towerFolder = ReplicatedStorage:FindFirstChild("Towers") or Instance.new("Folder", ReplicatedStorage)
+towerFolder.Name = "Towers"
+
+local model = Instance.new("Model")
+model.Name = "BasicTower"
+model.Parent = towerFolder
+
+local function createPart(name, size, cframe, color, material)
+    local p = Instance.new("Part")
+    p.Name = name
+    p.Size = size
+    p.CFrame = cframe
+    p.Color = color
+    p.Material = material or Enum.Material.Plastic
+    p.Anchored = true
+    p.CanCollide = true
+    p.Parent = model
+    return p
+end
+
+-- R6 Noob Dimensions
+local torso = createPart("Torso", Vector3.new(2, 2, 1), CFrame.new(0, 0, 0), Color3.fromRGB(0, 162, 255)) -- Blue
+model.PrimaryPart = torso
+
+local head = createPart("Head", Vector3.new(1.2, 1.2, 1.2), CFrame.new(0, 1.6, 0), Color3.fromRGB(255, 255, 0)) -- Yellow Head
+local lArm = createPart("Left Arm", Vector3.new(1, 2, 1), CFrame.new(-1.5, 0, 0), Color3.fromRGB(255, 255, 0)) -- Yellow
+local rArm = createPart("Right Arm", Vector3.new(1, 2, 1), CFrame.new(1.5, 0, 0), Color3.fromRGB(255, 255, 0)) -- Yellow
+local lLeg = createPart("Left Leg", Vector3.new(1, 2, 1), CFrame.new(-0.5, -2, 0), Color3.fromRGB(75, 151, 75)) -- Green
+local rLeg = createPart("Right Leg", Vector3.new(1, 2, 1), CFrame.new(0.5, -2, 0), Color3.fromRGB(75, 151, 75)) -- Green
+
+-- Add the Range Ring at his feet
+local ring = Instance.new("Part")
+ring.Name = "RangeRing"
+ring.Shape = Enum.PartType.Cylinder
+ring.Size = Vector3.new(0.2, 50, 50) -- Range is 25, so diameter is 50
+ring.Transparency = 0.8
+ring.Color = Color3.fromRGB(0, 170, 255)
+ring.Material = Enum.Material.Neon
+ring.Anchored = true
+ring.CanCollide = false
+ring.CFrame = CFrame.new(0, -3, 0) * CFrame.Angles(0, 0, math.rad(90))
+ring.Parent = model
+
+print("NOOB BUILT! Your defender is ready for orders.")
+
+
+
+
+-- strong noob and fastnoob
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local towers = ReplicatedStorage:WaitForChild("Towers")
+local basic = towers:WaitForChild("BasicTower")
+
+local fast = basic:Clone()
+fast.Name = "FastNoob"
+fast.Torso.Color = Color3.fromRGB(255, 100, 100) -- Red Torso
+fast.Parent = towers
+
+local strong = basic:Clone()
+strong.Name = "StrongNoob"
+strong.Torso.Color = Color3.fromRGB(100, 100, 100) -- Grey Torso
+strong.Parent = towers
+print("Gacha Variants Created!")

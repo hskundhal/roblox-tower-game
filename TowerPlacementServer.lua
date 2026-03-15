@@ -42,11 +42,14 @@ placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition)
 		local newTower = towerToSpawn:Clone()
 		
 		-- Move it to the position the player clicked
-		-- The client already calculated the "ground" position, so we just add the height offset here.
-		local heightOffset = newTower.PrimaryPart.Size.Y / 2
-		local finalCFrame = CFrame.new(targetPosition + Vector3.new(0, heightOffset, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		-- For character models (Noob), the Torso is 3 studs above the feet
+		local heightOffset = 3 
+		local finalCFrame = CFrame.new(targetPosition + Vector3.new(0, heightOffset, 0))
 		
 		newTower:PivotTo(finalCFrame)
+		
+		-- NEW: Set the initial level for upgrades
+		newTower:SetAttribute("Level", 1)
 		
 		-- Put it in the Towers folder so everyone can see it and it can be cleared easily!
 		newTower.Parent = workspaceTowers
@@ -56,3 +59,56 @@ placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition)
 		warn("Tower " .. towerName .. " not found in ReplicatedStorage.Towers!")
 	end
 end)
+
+-- NEW: Tower Upgrade Logic
+local upgradeEvent = ReplicatedStorage:FindFirstChild("UpgradeTowerEvent")
+if not upgradeEvent then
+	upgradeEvent = Instance.new("RemoteEvent")
+	upgradeEvent.Name = "UpgradeTowerEvent"
+	upgradeEvent.Parent = ReplicatedStorage
+end
+
+upgradeEvent.OnServerEvent:Connect(function(player, towerToUpgrade)
+	if not towerToUpgrade or not towerToUpgrade:IsDescendantOf(workspaceTowers) then return end
+	
+	local currentLevel = towerToUpgrade:GetAttribute("Level") or 1
+	local upgradeCost = currentLevel * 100 -- Cost: $100, $200, $300...
+	
+	local cash = player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Cash")
+	if cash and cash.Value >= upgradeCost then
+		cash.Value = cash.Value - upgradeCost
+		towerToUpgrade:SetAttribute("Level", currentLevel + 1)
+		print(player.Name .. " upgraded " .. towerToUpgrade.Name .. " to Level " .. (currentLevel + 1))
+	else
+		warn(player.Name .. " doesn't have enough cash to upgrade! (Needs " .. upgradeCost .. ")")
+	end
+end)
+
+-- NEW: Gacha Roll Logic
+local rollFunction = ReplicatedStorage:FindFirstChild("RollTowerFunction")
+if not rollFunction then
+	rollFunction = Instance.new("RemoteFunction")
+	rollFunction.Name = "RollTowerFunction"
+	rollFunction.Parent = ReplicatedStorage
+end
+
+local AVAILABLE_TOWERS = {"BasicTower", "FastNoob", "StrongNoob"} -- These must exist in RT.Towers
+local ROLL_COST = 50
+
+rollFunction.OnServerInvoke = function(player)
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local pt = leaderstats and leaderstats:FindFirstChild("PT")
+	
+	if pt and pt.Value >= ROLL_COST then
+		pt.Value = pt.Value - ROLL_COST
+		
+		-- Simple random selection
+		local randomIndex = math.random(1, #AVAILABLE_TOWERS)
+		local reward = AVAILABLE_TOWERS[randomIndex]
+		
+		print(player.Name .. " rolled and got: " .. reward)
+		return reward
+	else
+		return nil -- Not enough PT
+	end
+end

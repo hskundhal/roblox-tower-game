@@ -56,6 +56,35 @@ updateCashDisplay()
 cashValue.Changed:Connect(updateCashDisplay)
 
 ---------------------------------------------------
+-- PT (PUNCH TOKENS) DISPLAY
+---------------------------------------------------
+local ptValue = leaderstats:WaitForChild("PT")
+
+local ptLabel = Instance.new("TextLabel")
+ptLabel.Name = "PTLabel"
+ptLabel.Size = UDim2.new(0, 250, 0, 50) 
+ptLabel.AnchorPoint = Vector2.new(0.5, 1)
+ptLabel.Position = UDim2.new(0.5, 0, 1, -150)
+ptLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40) 
+ptLabel.BackgroundTransparency = 0.2 
+ptLabel.TextColor3 = Color3.fromRGB(255, 255, 127) -- Yellowish text
+ptLabel.Font = Enum.Font.FredokaOne 
+ptLabel.TextSize = 28
+ptLabel.TextStrokeTransparency = 0 
+ptLabel.Text = "✨ PT: 0"
+
+local ptCorner = Instance.new("UICorner")
+ptCorner.CornerRadius = UDim.new(0, 10)
+ptCorner.Parent = ptLabel
+ptLabel.Parent = screenGui
+
+local function updatePTDisplay()
+	ptLabel.Text = "✨ PT: " .. tostring(ptValue.Value)
+end
+updatePTDisplay()
+ptValue.Changed:Connect(updatePTDisplay)
+
+---------------------------------------------------
 -- BASE HEALTH DISPLAY
 ---------------------------------------------------
 local healthLabel = Instance.new("TextLabel")
@@ -92,3 +121,123 @@ end)
 -- Ask the server directly for the current health right now!
 local startingHealth, maxHealth = getHealthFunction:InvokeServer()
 healthLabel.Text = "❤️ Base Health: " .. startingHealth .. " / " .. maxHealth
+
+---------------------------------------------------
+-- TOWER SELECTION BAR
+---------------------------------------------------
+
+-- Create a BindableEvent for communication
+local selectEvent = ReplicatedStorage:FindFirstChild("SelectTowerEvent")
+if not selectEvent then
+    selectEvent = Instance.new("BindableEvent")
+    selectEvent.Name = "SelectTowerEvent"
+    selectEvent.Parent = ReplicatedStorage
+end
+
+local barFrame = Instance.new("Frame")
+barFrame.Name = "TowerBar"
+barFrame.Size = UDim2.new(0, 500, 0, 80)
+barFrame.AnchorPoint = Vector2.new(0.5, 1)
+barFrame.Position = UDim2.new(0.5, 0, 1, -150)
+barFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+barFrame.BackgroundTransparency = 0.4
+barFrame.Parent = screenGui
+
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(0, 15)
+barCorner.Parent = barFrame
+
+local layout = Instance.new("UIListLayout")
+layout.FillDirection = Enum.FillDirection.Horizontal
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.VerticalAlignment = Enum.VerticalAlignment.Center
+layout.Padding = UDim.new(0, 10)
+layout.Parent = barFrame
+
+local towerInventory = {
+    {name = "BasicTower", icon = "Noob", cost = 100},
+    {name = "Locked", icon = "?", cost = 0},
+    {name = "Locked", icon = "?", cost = 0},
+    {name = "Locked", icon = "?", cost = 0},
+    {name = "Locked", icon = "?", cost = 0},
+}
+
+for i, data in ipairs(towerInventory) do
+    local slot = Instance.new("TextButton")
+    slot.Name = "Slot" .. i
+    slot.Size = UDim2.new(0, 80, 0, 70)
+    slot.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    slot.TextColor3 = Color3.fromRGB(255, 255, 255)
+    slot.TextSize = 14
+    slot.Font = Enum.Font.FredokaOne
+    slot.Text = data.icon .. "\n$" .. data.cost
+    
+    if data.name == "Locked" then
+        slot.Text = "Locked"
+        slot.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        slot.BackgroundTransparency = 0.5
+    end
+    
+    local slotCorner = Instance.new("UICorner")
+    slotCorner.CornerRadius = UDim.new(0, 8)
+    slotCorner.Parent = slot
+    
+    slot.MouseButton1Click:Connect(function()
+        if data.name ~= "Locked" then
+            selectEvent:Fire(data.name)
+        end
+    end)
+    
+    slot.Parent = barFrame
+end
+
+---------------------------------------------------
+-- GACHA / ROLL UI
+---------------------------------------------------
+local rollFunction = ReplicatedStorage:WaitForChild("RollTowerFunction")
+
+local rollButton = Instance.new("TextButton")
+rollButton.Name = "RollButton"
+rollButton.Size = UDim2.new(0, 150, 0, 40)
+rollButton.AnchorPoint = Vector2.new(1, 1)
+rollButton.Position = UDim2.new(1, -20, 1, -20) -- Bottom Right
+rollButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+rollButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+rollButton.Font = Enum.Font.FredokaOne
+rollButton.TextSize = 20
+rollButton.Text = "🎲 ROLL (50 PT)"
+rollButton.Parent = screenGui
+
+local rollCorner = Instance.new("UICorner")
+rollCorner.CornerRadius = UDim.new(0, 8)
+rollCorner.Parent = rollButton
+
+rollButton.MouseButton1Click:Connect(function()
+    local newTower = rollFunction:InvokeServer()
+    if newTower then
+        print("GACHA: Unlocked " .. newTower)
+        
+        -- Find first locked slot to replace
+        for i, data in ipairs(towerInventory) do
+            if data.name == "Locked" then
+                data.name = newTower
+                data.icon = newTower:sub(1,1) .. " Noob" -- Simple icon
+                data.cost = 150 -- Default price for new ones
+                
+                -- Update the button text
+                local button = barFrame:FindFirstChild("Slot" .. i)
+                if button then
+                    button.Text = data.icon .. "\n$" .. data.cost
+                    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                    button.BackgroundTransparency = 0
+                end
+                break
+            end
+        end
+    else
+        print("GACHA: Not enough PT or error!")
+        rollButton.Text = "NOT ENOUGH PT"
+        task.wait(1)
+        rollButton.Text = "🎲 ROLL (50 PT)"
+    end
+end)

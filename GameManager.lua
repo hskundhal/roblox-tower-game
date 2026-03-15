@@ -9,6 +9,10 @@ local BASE_HEALTH_MAX = 100
 local STARTING_CASH = 500
 local TIME_BETWEEN_WAVES = 10
 
+-- Game Difficulty (1-5)
+_G.Difficulty = 1 
+
+
 -- Game State Variables
 local baseHealth = BASE_HEALTH_MAX
 local currentWave = 0
@@ -67,6 +71,11 @@ Players.PlayerAdded:Connect(function(player)
 	cash.Name = "Cash"
 	cash.Value = STARTING_CASH
 	cash.Parent = leaderstats
+	
+	local pt = Instance.new("IntValue")
+	pt.Name = "PT"
+	pt.Value = 0
+	pt.Parent = leaderstats
 end)
 
 -- Function to handle when an enemy reaches the end
@@ -111,13 +120,16 @@ local function spawnWave(waveNumber)
 		
 		newZombie.Parent = workspaceEnemies -- Put it in the folder for easy cleanup!
 		
-		-- Hook up a function to give all players cash when the zombie dies
+		-- Hook up a function to give all players cash and PT when the zombie dies
 		local humanoid = newZombie:WaitForChild("Humanoid")
 		humanoid.Died:Connect(function()
 			for _, player in ipairs(Players:GetPlayers()) do
-				local cash = player:FindFirstChild("leaderstats"):FindFirstChild("Cash")
-				if cash then
-					cash.Value = cash.Value + 10 -- Give 10 cash per kill
+				local leaderstats = player:FindFirstChild("leaderstats")
+				if leaderstats then
+					local cash = leaderstats:FindFirstChild("Cash")
+					local pt = leaderstats:FindFirstChild("PT")
+					if cash then cash.Value = cash.Value + 10 end
+					if pt then pt.Value = pt.Value + 1 end
 				end
 			end
 			-- Wait 2 seconds for the body to disappear
@@ -125,8 +137,12 @@ local function spawnWave(waveNumber)
 			newZombie:Destroy()
 		end)
 		
+		-- Apply difficulty scaling to health
+		humanoid.MaxHealth = humanoid.MaxHealth * _G.Difficulty
+		humanoid.Health = humanoid.MaxHealth
+		
 		-- Wait a short time between each zombie spawning
-		task.wait(1.5)
+		task.wait(1.5 / _G.Difficulty) -- Scale spawn speed too?
 	end
 end
 
@@ -137,9 +153,17 @@ local function clearZombiesAndTowers()
 	print("Map cleared of all enemies and towers!")
 end
 
--- The Master Game Loop
-while true do
-	print("--- NEW GAME STARTING IN 5 SECONDS! ---")
+-- RemoteEvent for starting the game
+local startGameEvent = ReplicatedStorage:FindFirstChild("StartGameEvent")
+if not startGameEvent then
+	startGameEvent = Instance.new("RemoteEvent")
+	startGameEvent.Name = "StartGameEvent"
+	startGameEvent.Parent = ReplicatedStorage
+end
+
+local function runGame(difficulty)
+	_G.Difficulty = difficulty
+	print("--- NEW GAME STARTING AT DIFFICULTY " .. _G.Difficulty .. "! ---")
 	
 	-- Reset the game variables
 	baseHealth = BASE_HEALTH_MAX
@@ -151,13 +175,14 @@ while true do
 	
 	-- Give everyone starting cash again
 	for _, player in ipairs(Players:GetPlayers()) do
-		local cash = player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Cash")
-		if cash then
-			cash.Value = STARTING_CASH
+		local leaderstats = player:FindFirstChild("leaderstats")
+		if leaderstats then
+			local cash = leaderstats:FindFirstChild("Cash")
+			if cash then cash.Value = STARTING_CASH end
 		end
 	end
 	
-	task.wait(5) -- Give players 5 seconds to get ready
+	task.wait(2) 
 
 	-- The Wave Loop
 	while gameInProgress do
@@ -171,7 +196,13 @@ while true do
 	end
 	
 	-- If we broke out of the wave loop, the game is over!
-	print("Cleaning up the map for the next game...")
+	print("Game Over. Cleaning up...")
 	clearZombiesAndTowers()
-	task.wait(3) -- Wait a few seconds before restarting the whole process
+	task.wait(3)
 end
+
+-- Wait for a player to pick a level
+startGameEvent.OnServerEvent:Connect(function(player, selectedDifficulty)
+	if gameInProgress then return end -- Don't start if already running
+	runGame(selectedDifficulty or 1)
+end)
