@@ -9,6 +9,31 @@ local BASE_HEALTH_MAX = 100
 local STARTING_CASH = 500
 local TIME_BETWEEN_WAVES = 10
 
+-- Game Configuration
+local IS_LOBBY_PLACE = false -- CHANGE TO FALSE FOR YOUR COMBAT MAPS!
+local FINAL_WAVE = 5 -- The boss arrives here!
+local BOSS_NAME = "AlienBoss"
+
+-- Phase Sync (Server to Client)
+local gamePhaseValue = ReplicatedStorage:FindFirstChild("GamePhase")
+if not gamePhaseValue then
+	gamePhaseValue = Instance.new("StringValue")
+	gamePhaseValue.Name = "GamePhase"
+	gamePhaseValue.Value = "Lobby"
+	gamePhaseValue.Parent = ReplicatedStorage
+end
+
+-- Teleport player to Lobby on join
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		local lobbySpawn = workspace:FindFirstChild("LobbySpawn")
+		if lobbySpawn then
+			task.wait(0.1) -- Wait for character to fully load
+			character:PivotTo(lobbySpawn.CFrame + Vector3.new(0, 5, 0))
+		end
+	end)
+end)
+
 -- Game Difficulty (1-5)
 _G.Difficulty = 1 
 _G.GamePhase = "Lobby"
@@ -81,9 +106,12 @@ end)
 
 -- Function to handle when an enemy reaches the end
 -- You will need to call this from your EnemyMovement script!
-local function damageBase(damageAmount)
-	baseHealth = baseHealth - damageAmount
-	print("Base Health: " .. baseHealth .. " / " .. BASE_HEALTH_MAX)
+local function onEnemyReachedEnd(enemy)
+	local isBoss = (enemy.Name == BOSS_NAME)
+	local damage = isBoss and 50 or 10 -- Boss deals 50 damage!
+	
+	baseHealth = math.max(0, baseHealth - damage)
+	print("An " .. enemy.Name .. " reached the base! Base Health: " .. baseHealth .. " / " .. BASE_HEALTH_MAX)
 	
 	-- Tell everyone on the server that the health just went down!
 	healthEvent:FireAllClients(baseHealth, BASE_HEALTH_MAX)
@@ -94,21 +122,34 @@ local function damageBase(damageAmount)
 	end
 end
 -- We make this global so the Enemy script can talk to it
-_G.DamageBase = damageBase
+_G.OnEnemyReachedEnd = onEnemyReachedEnd
 
 
 -- Function to spawn a specific number of enemies
 local function spawnWave(waveNumber)
 	print("--- Wave " .. waveNumber .. " Starting! ---")
 	
-	-- A simple formula formula: Wave 1 spawns 5, Wave 2 spawns 10, etc.
-	local enemiesToSpawn = waveNumber * 5 
+	-- 1. Determine enemy type
+	local enemyName = "BasicAlien"
+	local isBossWave = (waveNumber == FINAL_WAVE)
 	
-	for i = 1, enemiesToSpawn do
+	-- 2. Spawn loop
+	local enemyCount = 5 + (waveNumber * 2)
+	if isBossWave then enemyCount = 1 end -- Just the boss? Or boss + minions? Let's do Boss.
+	
+	for i = 1, enemyCount do
 		-- Only spawn if the game hasn't ended
 		if not gameInProgress then break end
 		
-		local newZombie = basicZombie:Clone()
+		local templateName = isBossWave and BOSS_NAME or "Alien" -- Assuming "Alien" is the basic enemy
+		local template = enemyFolder:FindFirstChild(templateName)
+		
+		if not template then
+			warn(templateName .. " not found in ReplicatedStorage.Enemies!")
+			break
+		end
+		
+		local newZombie = template:Clone()
 		
 		-- Teleport it to the start of the path and face the next waypoint!
 		local waypoint2 = waypointsFolder:FindFirstChild("2")
@@ -129,8 +170,13 @@ local function spawnWave(waveNumber)
 				if leaderstats then
 					local cash = leaderstats:FindFirstChild("Cash")
 					local pt = leaderstats:FindFirstChild("PT")
-					if cash then cash.Value = cash.Value + 10 end
-					if pt then pt.Value = pt.Value + 1 end
+					
+					-- Boss gives 500 cash and 50 PT!
+					local rewardCash = isBossWave and 500 or 10
+					local rewardPT = isBossWave and 50 or 1
+					
+					if cash then cash.Value = cash.Value + rewardCash end
+					if pt then pt.Value = pt.Value + rewardPT end
 				end
 			end
 			-- Wait 2 seconds for the body to disappear
@@ -139,8 +185,13 @@ local function spawnWave(waveNumber)
 		end)
 		
 		-- Apply difficulty scaling to health
-		humanoid.MaxHealth = humanoid.MaxHealth * _G.Difficulty
+		local healthMult = isBossWave and 20 or 1 -- Boss has 20x health!
+		humanoid.MaxHealth = humanoid.MaxHealth * _G.Difficulty * healthMult
 		humanoid.Health = humanoid.MaxHealth
+		
+		if isBossWave then
+			print("🚨 BOSS WARNING: " .. BOSS_NAME .. " HAS SPAWNED!")
+		end
 		
 		-- Wait a short time between each zombie spawning
 		task.wait(1.5 / _G.Difficulty) -- Scale spawn speed too?
@@ -165,6 +216,7 @@ end
 local function runGame(difficulty)
 	_G.Difficulty = difficulty
 	_G.GamePhase = "Combat"
+	gamePhaseValue.Value = "Combat"
 	print("--- NEW GAME STARTING AT DIFFICULTY " .. _G.Difficulty .. "! ---")
 	
 	-- Teleport players to Map
@@ -210,6 +262,7 @@ local function runGame(difficulty)
 	clearZombiesAndTowers()
 	
 	_G.GamePhase = "Lobby"
+	gamePhaseValue.Value = "Lobby"
 	-- Teleport players back to Lobby
 	local lobbySpawn = workspace:FindFirstChild("LobbySpawn")
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -221,8 +274,22 @@ local function runGame(difficulty)
 	task.wait(3)
 end
 
--- Wait for a player to pick a level
+-- Wait for a player to pick a level (backup - in case it's triggered directly)
 startGameEvent.OnServerEvent:Connect(function(player, selectedDifficulty)
+	if IS_LOBBY_PLACE then return end -- NO COMBAT IN LOBBY!
 	if gameInProgress then return end -- Don't start if already running
 	runGame(selectedDifficulty or 1)
+end)
+
+-- Listen for the Elevator Voting system to start the game
+local startBind = ReplicatedStorage:FindFirstChild("StartGameBind")
+if not startBind then
+	startBind = Instance.new("BindableEvent")
+	startBind.Name = "StartGameBind"
+	startBind.Parent = ReplicatedStorage
+end
+startBind.Event:Connect(function(winningDifficulty)
+	if gameInProgress then return end  -- Don't double-start
+	print("ElevatorManager triggered game start at difficulty: " .. winningDifficulty)
+	runGame(winningDifficulty or 1)
 end)

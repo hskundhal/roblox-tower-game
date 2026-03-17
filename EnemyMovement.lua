@@ -43,8 +43,10 @@ local function moveAlongPath()
     
     -- When the loop finishes, the enemy has reached the final waypoint!
     -- Damage the player's Base health using the global function from GameManager
-    if _G.DamageBase then
-        _G.DamageBase(10) -- Zombies do 10 damage
+    if _G.OnEnemyReachedEnd then
+        _G.OnEnemyReachedEnd(enemy)
+    elseif _G.DamageBase then
+        _G.DamageBase(10) -- Fallback for old system
     else
         warn("GameManager is not running! Cannot damage base.")
     end

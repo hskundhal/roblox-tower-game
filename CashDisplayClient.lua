@@ -190,6 +190,114 @@ for i, data in ipairs(towerInventory) do
     
     slot.Parent = barFrame
 end
+---------------------------------------------------
+-- ELEVATOR VOTE UI
+-- Only visible when player is standing on an elevator
+---------------------------------------------------
+local onElevatorEvent = ReplicatedStorage:WaitForChild("OnElevatorEvent")
+local castVoteEvent   = ReplicatedStorage:WaitForChild("CastVoteEvent")
+local voteUpdateEvent = ReplicatedStorage:WaitForChild("VoteUpdateEvent")
+
+local voteFrame = Instance.new("Frame")
+voteFrame.Name = "VoteFrame"
+voteFrame.Size = UDim2.new(0, 340, 0, 160)
+voteFrame.AnchorPoint = Vector2.new(0.5, 0)
+voteFrame.Position = UDim2.new(0.5, 0, 0, 50)
+voteFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+voteFrame.BackgroundTransparency = 0.15
+voteFrame.Visible = false
+voteFrame.Parent = screenGui
+
+local vfCorner = Instance.new("UICorner")
+vfCorner.CornerRadius = UDim.new(0, 16)
+vfCorner.Parent = voteFrame
+
+local voteTitle = Instance.new("TextLabel")
+voteTitle.Size = UDim2.new(1, 0, 0, 36)
+voteTitle.BackgroundTransparency = 1
+voteTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+voteTitle.Font = Enum.Font.FredokaOne
+voteTitle.TextSize = 20
+voteTitle.Text = "🗳️ VOTE FOR DIFFICULTY"
+voteTitle.Parent = voteFrame
+
+local tallyLabel = Instance.new("TextLabel")
+tallyLabel.Name = "TallyLabel"
+tallyLabel.Size = UDim2.new(1, 0, 0, 28)
+tallyLabel.Position = UDim2.new(0, 0, 1, -30)
+tallyLabel.BackgroundTransparency = 1
+tallyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+tallyLabel.Font = Enum.Font.FredokaOne
+tallyLabel.TextSize = 16
+tallyLabel.Text = "Step on, then tap a difficulty!"
+tallyLabel.Parent = voteFrame
+
+local btnRow = Instance.new("Frame")
+btnRow.Size = UDim2.new(1, -16, 0, 70)
+btnRow.Position = UDim2.new(0, 8, 0, 40)
+btnRow.BackgroundTransparency = 1
+btnRow.Parent = voteFrame
+
+local btnLayout2 = Instance.new("UIListLayout")
+btnLayout2.FillDirection = Enum.FillDirection.Horizontal
+btnLayout2.HorizontalAlignment = Enum.HorizontalAlignment.Center
+btnLayout2.VerticalAlignment = Enum.VerticalAlignment.Center
+btnLayout2.Padding = UDim.new(0, 6)
+btnLayout2.Parent = btnRow
+
+local DIFF_COLORS = {
+    Color3.fromRGB(80, 200, 80),
+    Color3.fromRGB(80, 160, 230),
+    Color3.fromRGB(230, 200, 60),
+    Color3.fromRGB(230, 120, 40),
+    Color3.fromRGB(220, 50, 50),
+}
+
+for diff = 1, 5 do
+    local btn = Instance.new("TextButton")
+    btn.Name = "Diff" .. diff
+    btn.Size = UDim2.new(0, 56, 0, 60)
+    btn.BackgroundColor3 = DIFF_COLORS[diff]
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.FredokaOne
+    btn.TextSize = 22
+    btn.Text = tostring(diff)
+    btn.BackgroundTransparency = 0.2
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 10)
+    bc.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        castVoteEvent:FireServer(diff)
+        for _, child in ipairs(btnRow:GetChildren()) do
+            if child:IsA("TextButton") then child.BackgroundTransparency = 0.4 end
+        end
+        btn.BackgroundTransparency = 0
+    end)
+    btn.Parent = btnRow
+end
+
+onElevatorEvent.OnClientEvent:Connect(function(elevatorName)
+    if elevatorName then
+        voteFrame.Visible = true
+        voteTitle.Text = "🗳️ VOTE — " .. elevatorName
+        tallyLabel.Text = "Tap a difficulty to vote!"
+        for _, child in ipairs(btnRow:GetChildren()) do
+            if child:IsA("TextButton") then child.BackgroundTransparency = 0.2 end
+        end
+    else
+        voteFrame.Visible = false
+    end
+end)
+
+voteUpdateEvent.OnClientEvent:Connect(function(tally, timerSecs)
+    local parts = {}
+    for d = 1, 5 do
+        if tally[d] and tally[d] > 0 then
+            table.insert(parts, "Lv" .. d .. ":" .. tally[d])
+        end
+    end
+    tallyLabel.Text = "⏱ " .. timerSecs .. "s  " .. (#parts > 0 and table.concat(parts, "  ") or "")
+end)
 
 ---------------------------------------------------
 -- GACHA / ROLL UI
@@ -244,3 +352,34 @@ rollButton.MouseButton1Click:Connect(function()
         rollButton.Text = "🎲 ROLL (50 PT)"
     end
 end)
+
+---------------------------------------------------
+-- PHASE-BASED UI TOGGLING
+---------------------------------------------------
+local gamePhaseValue = ReplicatedStorage:WaitForChild("GamePhase")
+
+local function onPhaseChanged()
+    local phase = gamePhaseValue.Value
+    print("UI Phase Update: " .. phase)
+
+    if phase == "Lobby" then
+        -- LOBBY: Only show PT balance
+        ptLabel.Visible    = true
+        -- Hide all combat/game UI
+        cashLabel.Visible  = false
+        healthLabel.Visible = false
+        barFrame.Visible   = false
+        rollButton.Visible = true   -- CAN roll in lobby!
+    else
+        -- COMBAT: Show everything needed to play
+        ptLabel.Visible     = true   -- still show PT during combat
+        cashLabel.Visible   = true
+        healthLabel.Visible = true
+        barFrame.Visible    = true
+        rollButton.Visible  = false  -- no rolling during combat
+    end
+end
+
+-- Run once at start and then on every phase change
+onPhaseChanged()
+gamePhaseValue.Changed:Connect(onPhaseChanged)

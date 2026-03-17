@@ -128,3 +128,36 @@ end
 strong.Parent = towers
 
 print("Gacha Variants Created with UNIQUE STATS! Fast: 0.35s / Strong: 55 Dmg")
+
+
+
+
+local folder = Instance.new("Folder")
+folder.Name = "Elevators"
+folder.Parent = workspace
+
+for i = 1, 4 do
+    local pad = Instance.new("Part")
+    pad.Name = "Elevator" .. i
+    pad.Size = Vector3.new(12, 1, 12)
+    pad.Position = Vector3.new(i * 20, 0.5, 0)
+    pad.Anchored = true
+    pad.Color = Color3.fromRGB(0, 170, 255)
+    pad.Transparency = 0.5
+    pad.Parent = folder
+    
+    local sg = Instance.new("SurfaceGui")
+    sg.Name = "Display"
+    sg.Face = Enum.NormalId.Top
+    sg.Parent = pad
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextSize = 50
+    label.Font = Enum.Font.FredokaOne
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Text = "Elevator " .. i .. "\n0/3\nWAITING"
+    label.Parent = sg
+end
+print("4 Elevators Created! Don't forget to put ElevatorManager.lua in ServerScriptService.")
