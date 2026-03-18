@@ -17,7 +17,8 @@ local selectedMultiplier = 1
 local towerFolder = ReplicatedStorage:WaitForChild("Towers")
 local previewModel = nil
 local rangePreview = nil
-local TOWER_RANGE = 18 -- REDUCED RANGE
+local TOWER_RANGE = 18
+local isPlacementValid = false
 
 -- 1. Function to clear current preview
 local function clearPreview()
@@ -91,6 +92,18 @@ RunService.RenderStepped:Connect(function()
         
         if result then
             local hitPos = result.Position
+            local hitPart = result.Instance
+            
+            -- Check if placement is on road or waypoints
+            local onRoad = (hitPart.Name == "Road") or (hitPart.Name == "Path") or hitPart:IsDescendantOf(workspace:FindFirstChild("Waypoints"))
+            isPlacementValid = not onRoad
+            
+            -- Update ghost color based on validity
+            local ghostColor = isPlacementValid and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+            for _, part in ipairs(previewModel:GetDescendants()) do
+                if part:IsA("BasePart") then part.Color = ghostColor end
+            end
+            
             -- For a NOOB character, the Torso (PrimaryPart) is 3 studs above ground
             local adjustedPos = hitPos + Vector3.new(0, 3, 0)
             
@@ -100,6 +113,7 @@ RunService.RenderStepped:Connect(function()
             previewModel.Parent = workspace
             rangePreview.Transparency = 0.7
         else
+            isPlacementValid = false
             rangePreview.Transparency = 1
             previewModel.Parent = nil
         end
@@ -111,7 +125,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if previewModel and previewModel.Parent == workspace and selectedTowerName then
+        if previewModel and previewModel.Parent == workspace and selectedTowerName and isPlacementValid then
             -- Tell server the GROUND position
             local finalPos = previewModel.PrimaryPart.Position - Vector3.new(0, 3, 0)
             placementEvent:FireServer(selectedTowerName, finalPos, selectedMultiplier)
