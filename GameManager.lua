@@ -232,12 +232,12 @@ local function spawnWave(waveNumber)
 			end)
 			
 			-- Apply difficulty scaling to health and size
-			local waveHealthBonus = waveNumber * 10
+			local waveHealthBonus = waveNumber * 25
 			local healthMult = 1
 			if isBossWave then
 				healthMult = 20
 			elseif templateName == "NewAlien" then
-				humanoid.MaxHealth = 100
+				humanoid.MaxHealth = 150
 			end
 			
 			humanoid.MaxHealth = (humanoid.MaxHealth + waveHealthBonus) * _G.Difficulty * healthMult
