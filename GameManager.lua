@@ -48,7 +48,7 @@ if not toggleSpeedEvent then
 end
 
 toggleSpeedEvent.OnServerEvent:Connect(function(player)
-	if gameSpeed.Value >= 3 then
+	if gameSpeed.Value >= 5 then
 		gameSpeed.Value = 1
 	else
 		gameSpeed.Value = gameSpeed.Value + 1
@@ -308,6 +308,13 @@ local function runGame(difficulty)
 	while gameInProgress do
 		currentWave = currentWave + 1
 		spawnWave(currentWave)
+		
+		-- NEW: Check if this was the final wave
+		if currentWave >= FINAL_WAVE then
+			print("--- FINAL WAVE CLEARED! VICTORY! ---")
+			gameInProgress = false
+			break
+		end
 		
 		if gameInProgress then
 			print("Wave cleared! Waiting " .. TIME_BETWEEN_WAVES .. " seconds...")

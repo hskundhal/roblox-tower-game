@@ -101,32 +101,65 @@ local rightArmDefaultCFrame = rightArm.CFrame
 while true do
     updateVisuals()
     
-    local target = findClosestEnemy()
+    local towerName = tower.Name
+    local waitTime = attackSpeed / gameSpeed.Value
     
-    if target then
-        local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target:FindFirstChild("UpperTorso")
-        local humanoid = target:FindFirstChild("Humanoid")
+    if towerName == "ALL OUT NOOB" then
+        -- AoE ATTACK (Doesn't necessarily need a single target to start)
+        local attackDamage = 15
+        local workspaceEnemies = workspace:FindFirstChild("Enemies") or workspace
+        local targetsInRange = {}
         
-        if targetRoot and humanoid then
-            -- Face the target
-            local lookAtCFrame = CFrame.lookAt(torso.Position, Vector3.new(targetRoot.Position.X, torso.Position.Y, targetRoot.Position.Z))
-            tower:PivotTo(lookAtCFrame)
-            
-            -- PUNCH animation (Move Right Arm forward)
+        for _, enemy in ipairs(workspaceEnemies:GetChildren()) do
+            local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
+            local enemyHumanoid = enemy:FindFirstChild("Humanoid")
+            if enemyRoot and enemyHumanoid and enemyHumanoid.Health > 0 then
+                if (enemyRoot.Position - torso.Position).Magnitude <= range then
+                    table.insert(targetsInRange, {root = enemyRoot, hum = enemyHumanoid})
+                end
+            end
+        end
+
+        if #targetsInRange > 0 then
+            -- Animate
             local originalArmCFrame = rightArm.CFrame
-            local punchCFrame = rightArm.CFrame * CFrame.new(0, 0, -2) -- Move forward 2 studs
+            rightArm.CFrame = rightArm.CFrame * CFrame.new(0, 0, -2)
             
-            rightArm.CFrame = punchCFrame
+            for _, targetData in ipairs(targetsInRange) do
+                targetData.hum:TakeDamage(attackDamage)
+                createHitEffect(targetData.root.Position)
+            end
+            print("ALL OUT NOOB hit " .. #targetsInRange .. " targets!")
             
-            -- Damage and Effect
-            humanoid:TakeDamage(currentDamage)
-            createHitEffect(targetRoot.Position)
-            print("NOOB PUNCH: " .. target.Name)
-            
-            task.wait(0.15 / gameSpeed.Value)
+            task.wait(0.2 / gameSpeed.Value)
             rightArm.CFrame = originalArmCFrame
+        end
+        waitTime = 1.0 / gameSpeed.Value
+    else
+        -- SINGLE TARGET ATTACK
+        local target = findClosestEnemy()
+        if target then
+            local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target:FindFirstChild("UpperTorso")
+            local humanoid = target:FindFirstChild("Humanoid")
+            
+            if targetRoot and humanoid then
+                -- Face target
+                local lookAtTarget = CFrame.lookAt(torso.Position, Vector3.new(targetRoot.Position.X, torso.Position.Y, targetRoot.Position.Z))
+                tower:PivotTo(lookAtTarget)
+                
+                -- Animate
+                local originalArmCFrame = rightArm.CFrame
+                rightArm.CFrame = rightArm.CFrame * CFrame.new(0, 0, -2)
+                
+                humanoid:TakeDamage(currentDamage)
+                createHitEffect(targetRoot.Position)
+                print("NOOB PUNCH: " .. target.Name)
+                
+                task.wait(0.15 / gameSpeed.Value)
+                rightArm.CFrame = originalArmCFrame
+            end
         end
     end
     
-    task.wait(attackSpeed / gameSpeed.Value)
+    task.wait(waitTime)
 end
