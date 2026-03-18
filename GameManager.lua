@@ -11,8 +11,16 @@ local TIME_BETWEEN_WAVES = 10
 
 -- Game Configuration
 local IS_LOBBY_PLACE = false -- CHANGE TO FALSE FOR YOUR COMBAT MAPS!
-local FINAL_WAVE = 5 -- The boss arrives here!
+local FINAL_WAVE = 20 -- The boss arrives here!
 local BOSS_NAME = "AlienBoss"
+
+-- Wave Sync
+local waveEvent = ReplicatedStorage:FindFirstChild("UpdateWave")
+if not waveEvent then
+	waveEvent = Instance.new("RemoteEvent")
+	waveEvent.Name = "UpdateWave"
+	waveEvent.Parent = ReplicatedStorage
+end
 
 -- Phase Sync (Server to Client)
 local gamePhaseValue = ReplicatedStorage:FindFirstChild("GamePhase")
@@ -22,6 +30,31 @@ if not gamePhaseValue then
 	gamePhaseValue.Value = "Lobby"
 	gamePhaseValue.Parent = ReplicatedStorage
 end
+
+-- Game Speed Sync (1x or 2x)
+local gameSpeed = ReplicatedStorage:FindFirstChild("GameSpeed")
+if not gameSpeed then
+	gameSpeed = Instance.new("NumberValue")
+	gameSpeed.Name = "GameSpeed"
+	gameSpeed.Value = 1
+	gameSpeed.Parent = ReplicatedStorage
+end
+
+local toggleSpeedEvent = ReplicatedStorage:FindFirstChild("ToggleSpeedEvent")
+if not toggleSpeedEvent then
+	toggleSpeedEvent = Instance.new("RemoteEvent")
+	toggleSpeedEvent.Name = "ToggleSpeedEvent"
+	toggleSpeedEvent.Parent = ReplicatedStorage
+end
+
+toggleSpeedEvent.OnServerEvent:Connect(function(player)
+	if gameSpeed.Value >= 3 then
+		gameSpeed.Value = 1
+	else
+		gameSpeed.Value = gameSpeed.Value + 1
+	end
+	print("Game Speed Toggled to: " .. gameSpeed.Value .. "x")
+end)
 
 -- Teleport player to Lobby on join
 Players.PlayerAdded:Connect(function(player)
@@ -128,6 +161,7 @@ _G.OnEnemyReachedEnd = onEnemyReachedEnd
 -- Function to spawn a specific number of enemies
 local function spawnWave(waveNumber)
 	print("--- Wave " .. waveNumber .. " Starting! ---")
+	waveEvent:FireAllClients(waveNumber, FINAL_WAVE)
 	
 	-- 1. Determine enemy type
 	local enemyName = "BasicAlien"
@@ -141,60 +175,84 @@ local function spawnWave(waveNumber)
 		-- Only spawn if the game hasn't ended
 		if not gameInProgress then break end
 		
-		local templateName = isBossWave and BOSS_NAME or "Alien" -- Assuming "Alien" is the basic enemy
+		local templateName = "Alien"
+		if isBossWave then
+			templateName = BOSS_NAME
+		elseif waveNumber >= 10 then
+			-- Mix normal and new aliens after wave 10
+			if math.random() > 0.5 then
+				templateName = "NewAlien"
+			end
+		end
+		
 		local template = enemyFolder:FindFirstChild(templateName)
 		
 		if not template then
 			warn(templateName .. " not found in ReplicatedStorage.Enemies!")
-			break
+			-- Fallback to basic Alien if NewAlien is missing
+			template = enemyFolder:FindFirstChild("Alien")
+			if not template then break end
 		end
 		
 		local newZombie = template:Clone()
 		
-		-- Teleport it to the start of the path and face the next waypoint!
+		-- Teleport it to the start of the path with a small random offset so they don't stack perfectly!
+		local randomOffset = Vector3.new(math.random(-4, 4), 0, math.random(-4, 4))
 		local waypoint2 = waypointsFolder:FindFirstChild("2")
 		if waypoint2 then
-			local lookAtCFrame = CFrame.lookAt(spawnPoint.Position, waypoint2.Position)
+			local lookAtCFrame = CFrame.lookAt(spawnPoint.Position + randomOffset, waypoint2.Position)
 			newZombie:PivotTo(lookAtCFrame)
 		else
-			newZombie:PivotTo(spawnPoint.CFrame)
+			newZombie:PivotTo(spawnPoint.CFrame + CFrame.new(randomOffset))
 		end
 		
 		newZombie.Parent = workspaceEnemies -- Put it in the folder for easy cleanup!
 		
 		-- Hook up a function to give all players cash and PT when the zombie dies
-		local humanoid = newZombie:WaitForChild("Humanoid")
-		humanoid.Died:Connect(function()
-			for _, player in ipairs(Players:GetPlayers()) do
-				local leaderstats = player:FindFirstChild("leaderstats")
-				if leaderstats then
-					local cash = leaderstats:FindFirstChild("Cash")
-					local pt = leaderstats:FindFirstChild("PT")
-					
-					-- Boss gives 500 cash and 50 PT!
-					local rewardCash = isBossWave and 500 or 10
-					local rewardPT = isBossWave and 50 or 1
-					
-					if cash then cash.Value = cash.Value + rewardCash end
-					if pt then pt.Value = pt.Value + rewardPT end
+		local humanoid = newZombie:FindFirstChild("Humanoid")
+		if humanoid then
+			humanoid.Died:Connect(function()
+				for _, player in ipairs(Players:GetPlayers()) do
+					local leaderstats = player:FindFirstChild("leaderstats")
+					if leaderstats then
+						local cash = leaderstats:FindFirstChild("Cash")
+						local pt = leaderstats:FindFirstChild("PT")
+						
+						-- Boss gives 500 cash and 50 PT!
+						local rewardCash = isBossWave and 500 or 10
+						local rewardPT = isBossWave and 50 or 1
+						
+						if cash then cash.Value = cash.Value + rewardCash end
+						if pt then pt.Value = pt.Value + rewardPT end
+					end
 				end
+				-- Wait 2 seconds for the body to disappear
+				task.wait(2)
+				newZombie:Destroy()
+			end)
+			
+			-- Apply difficulty scaling to health
+			local healthMult = 1
+			if isBossWave then
+				healthMult = 20
+			elseif templateName == "NewAlien" then
+				-- NewAlien defaults to 100 base health (Normal Alien is usually 10-20)
+				humanoid.MaxHealth = 100
 			end
-			-- Wait 2 seconds for the body to disappear
-			task.wait(2)
-			newZombie:Destroy()
-		end)
-		
-		-- Apply difficulty scaling to health
-		local healthMult = isBossWave and 20 or 1 -- Boss has 20x health!
-		humanoid.MaxHealth = humanoid.MaxHealth * _G.Difficulty * healthMult
-		humanoid.Health = humanoid.MaxHealth
+			
+			humanoid.MaxHealth = humanoid.MaxHealth * _G.Difficulty * healthMult
+			humanoid.Health = humanoid.MaxHealth
+		else
+			warn(templateName .. " is missing a Humanoid! It won't have health or be targetable.")
+		end
 		
 		if isBossWave then
 			print("🚨 BOSS WARNING: " .. BOSS_NAME .. " HAS SPAWNED!")
 		end
 		
-		-- Wait a short time between each zombie spawning
-		task.wait(1.5 / _G.Difficulty) -- Scale spawn speed too?
+		-- Wait a time between each zombie spawning (ensure minimum separation of 1.5s scaled by speed)
+		local spawnDelay = math.max(1.5, 3.0 / _G.Difficulty)
+		task.wait(spawnDelay / gameSpeed.Value) 
 	end
 end
 
@@ -253,7 +311,7 @@ local function runGame(difficulty)
 		
 		if gameInProgress then
 			print("Wave cleared! Waiting " .. TIME_BETWEEN_WAVES .. " seconds...")
-			task.wait(TIME_BETWEEN_WAVES)
+			task.wait(TIME_BETWEEN_WAVES / gameSpeed.Value)
 		end
 	end
 	

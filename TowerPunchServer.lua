@@ -5,6 +5,8 @@ local tower = script.Parent
 local torso = tower:WaitForChild("Torso")
 local rightArm = tower:WaitForChild("Right Arm")
 local head = tower:WaitForChild("Head")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local gameSpeed = ReplicatedStorage:WaitForChild("GameSpeed")
 
 -- Tower Stats
 local baseDamage = 25 
@@ -121,10 +123,10 @@ while true do
             createHitEffect(targetRoot.Position)
             print("NOOB PUNCH: " .. target.Name)
             
-            task.wait(0.15)
+            task.wait(0.15 / gameSpeed.Value)
             rightArm.CFrame = originalArmCFrame
         end
     end
     
-    task.wait(attackSpeed)
+    task.wait(attackSpeed / gameSpeed.Value)
 end

@@ -7,6 +7,8 @@ local humanoid = enemy:WaitForChild("Humanoid")
 
 -- Find the folder containing all our waypoints in the Workspace
 local waypointsFolder = workspace:WaitForChild("Waypoints")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local gameSpeed = ReplicatedStorage:WaitForChild("GameSpeed")
 
 -- Create an empty table (list) to store waypoints in order (1, 2, 3...)
 local waypoints = {}
@@ -54,6 +56,14 @@ local function moveAlongPath()
     enemy:Destroy() -- Remove the enemy from the game
 end
 
--- Wait 1 second to make sure the game has loaded before starting
-task.wait(1)
+-- Update WalkSpeed based on game speed
+local function updateSpeed()
+    humanoid.WalkSpeed = 16 * gameSpeed.Value
+end
+
+gameSpeed.Changed:Connect(updateSpeed)
+updateSpeed() -- Initial set
+
+-- Wait 2 seconds to make sure the game has loaded before starting
+task.wait(2)
 moveAlongPath()
