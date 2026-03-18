@@ -231,17 +231,21 @@ local function spawnWave(waveNumber)
 				newZombie:Destroy()
 			end)
 			
-			-- Apply difficulty scaling to health
+			-- Apply difficulty scaling to health and size
+			local waveHealthBonus = waveNumber * 10
 			local healthMult = 1
 			if isBossWave then
 				healthMult = 20
 			elseif templateName == "NewAlien" then
-				-- NewAlien defaults to 100 base health (Normal Alien is usually 10-20)
 				humanoid.MaxHealth = 100
 			end
 			
-			humanoid.MaxHealth = humanoid.MaxHealth * _G.Difficulty * healthMult
+			humanoid.MaxHealth = (humanoid.MaxHealth + waveHealthBonus) * _G.Difficulty * healthMult
 			humanoid.Health = humanoid.MaxHealth
+            
+            -- Size scaling: 5% increase per wave
+            local sizeScale = 1 + (waveNumber * 0.05)
+            newZombie:ScaleTo(sizeScale)
 		else
 			warn(templateName .. " is missing a Humanoid! It won't have health or be targetable.")
 		end

@@ -155,15 +155,22 @@ layout.Padding = UDim.new(0, 10)
 layout.Parent = barFrame
 
 local TOWER_COLORS = {
-    ["BasicTower"] = Color3.fromRGB(150, 150, 150),
-    ["FastNoob"] = Color3.fromRGB(80, 160, 230),
-    ["StrongNoob"] = Color3.fromRGB(230, 200, 60),
-    ["ALL OUT NOOB"] = Color3.fromRGB(220, 50, 50),
-    ["Locked"] = Color3.fromRGB(20, 20, 20)
+    ["BasicTower"] = Color3.fromRGB(240, 190, 40), -- Vibrant Gold Noob Yellow
+    ["FastNoob"] = Color3.fromRGB(0, 170, 255),    -- Bright Cyan/Blue
+    ["StrongNoob"] = Color3.fromRGB(255, 120, 0),  -- Deep Orange
+    ["ALL OUT NOOB"] = Color3.fromRGB(255, 0, 0),  -- True Red
+    ["Locked"] = Color3.fromRGB(15, 15, 15)
+}
+
+local TOWER_NAMES = {
+    ["BasicTower"] = "Basic",
+    ["FastNoob"] = "Fast",
+    ["StrongNoob"] = "Strong",
+    ["ALL OUT NOOB"] = "ALL OUT"
 }
 
 local towerInventory = {
-    {name = "BasicTower", icon = "Noob", cost = 100, multiplier = 1},
+    {name = "BasicTower", icon = "Basic", cost = 100, multiplier = 1},
     {name = "Locked", icon = "?", cost = 0, multiplier = 1},
     {name = "Locked", icon = "?", cost = 0, multiplier = 1},
     {name = "Locked", icon = "?", cost = 0, multiplier = 1},
@@ -176,14 +183,15 @@ for i, data in ipairs(towerInventory) do
     slot.Size = UDim2.new(0, 80, 0, 70)
     slot.BackgroundColor3 = TOWER_COLORS[data.name] or TOWER_COLORS["Locked"]
     slot.TextColor3 = Color3.fromRGB(255, 255, 255)
-    slot.TextSize = 14
+    slot.TextSize = 16
     slot.Font = Enum.Font.FredokaOne
-    slot.Text = data.icon .. " (x" .. data.multiplier .. ")\n$" .. data.cost
+    slot.Text = "<b>" .. data.icon .. "</b>\n$" .. data.cost
     slot.ZIndex = 51 -- Above barFrame
+    slot.RichText = true
+    slot.BackgroundTransparency = (data.name == "Locked") and 0.5 or 0
     
     if data.name == "Locked" then
         slot.Text = "Locked"
-        slot.BackgroundTransparency = 0.5
     end
     Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 8)
     slot.MouseButton1Click:Connect(function()
@@ -205,6 +213,7 @@ voteFrame.Position = UDim2.new(0.5, 0, 0, 50)
 voteFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
 voteFrame.BackgroundTransparency = 0.1
 voteFrame.Visible = false
+voteFrame.ZIndex = 40 -- Ensure it's above other elements
 voteFrame.Parent = screenGui
 Instance.new("UICorner", voteFrame).CornerRadius = UDim.new(0, 20)
 
@@ -215,7 +224,7 @@ voteTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
 voteTitle.Font = Enum.Font.FredokaOne
 voteTitle.TextSize = 28
 voteTitle.Text = "LEVEL SELECTION"
-voteTitle.Parent = voteFrame
+voteTitle.Parent = voteFrame 
 
 local tallyLabel = Instance.new("TextLabel")
 tallyLabel.Name = "TallyLabel"
@@ -331,38 +340,65 @@ optLayout.Padding = UDim.new(0, 15)
 optLayout.Parent = optionsContainer
 
 local REWARDS_DATA = {
-    {name = "BasicTower", chance = "50%", color = Color3.fromRGB(220, 220, 220)},
-    {name = "FastNoob", chance = "30%", color = Color3.fromRGB(80, 160, 230)},
-    {name = "StrongNoob", chance = "15%", color = Color3.fromRGB(230, 120, 40)},
-    {name = "ALL OUT NOOB", chance = "5%", color = Color3.fromRGB(255, 50, 50)}
+    {name = "FastNoob", chance = "60%", color = Color3.fromRGB(80, 160, 230)},
+    {name = "StrongNoob", chance = "30%", color = Color3.fromRGB(230, 120, 40)},
+    {name = "ALL OUT NOOB", chance = "10%", color = Color3.fromRGB(255, 50, 50)}
 }
+
+local gachaCards = {}
 
 for _, data in ipairs(REWARDS_DATA) do
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(0, 130, 1, 0)
+    card.Name = data.name
+    card.Size = UDim2.new(0, 180, 1, 0)
     card.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     card.ZIndex = 22
     card.Parent = optionsContainer
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
+    
     local nl = Instance.new("TextLabel")
     nl.Size = UDim2.new(1, 0, 0, 40)
     nl.BackgroundTransparency = 1
     nl.Font = Enum.Font.FredokaOne
-    nl.TextSize = 14
+    nl.TextSize = 18
     nl.TextColor3 = data.color
-    nl.Text = data.name
+    nl.Text = TOWER_NAMES[data.name] or data.name
     nl.ZIndex = 23
     nl.Parent = card
+    
     local pl = Instance.new("TextLabel")
     pl.Size = UDim2.new(1, 0, 0, 30)
     pl.Position = UDim2.new(0, 0, 1, -40)
     pl.BackgroundTransparency = 1
     pl.Font = Enum.Font.FredokaOne
-    pl.TextSize = 18
+    pl.TextSize = 20
     pl.TextColor3 = Color3.fromRGB(255, 255, 255)
-    pl.Text = data.chance
+    pl.Text = "Chance: " .. data.chance
     pl.ZIndex = 23
     pl.Parent = card
+
+    -- Owned Overlay
+    local ownedOverlay = Instance.new("Frame")
+    ownedOverlay.Name = "OwnedOverlay"
+    ownedOverlay.Size = UDim2.new(1, 0, 1, 0)
+    ownedOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ownedOverlay.BackgroundTransparency = 0.6
+    ownedOverlay.ZIndex = 24
+    ownedOverlay.Visible = false
+    ownedOverlay.Parent = card
+    Instance.new("UICorner", ownedOverlay).CornerRadius = UDim.new(0, 12)
+    
+    local xLabel = Instance.new("TextLabel")
+    xLabel.Size = UDim2.new(1, 0, 1, 0)
+    xLabel.BackgroundTransparency = 1
+    xLabel.Font = Enum.Font.FredokaOne
+    xLabel.TextSize = 60
+    xLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+    xLabel.Text = "X\nOWNED"
+    xLabel.ZIndex = 25
+    xLabel.Parent = ownedOverlay
+
+    gachaCards[data.name] = ownedOverlay
 end
 
 local finalRollBtn = Instance.new("TextButton")
@@ -378,7 +414,12 @@ finalRollBtn.Parent = gachaFrame
 Instance.new("UICorner", finalRollBtn).CornerRadius = UDim.new(0, 30)
 
 finalRollBtn.MouseButton1Click:Connect(function()
-    local res = rollFunction:InvokeServer()
+    local currentOwned = {}
+    for _, item in ipairs(towerInventory) do
+        if item.name ~= "Locked" then table.insert(currentOwned, item.name) end
+    end
+
+    local res = rollFunction:InvokeServer(currentOwned)
     if res then
         finalRollBtn.Text = "SUCCESS!"
         task.wait(0.5)
@@ -386,17 +427,29 @@ finalRollBtn.MouseButton1Click:Connect(function()
             if data.name == "Locked" then
                 data.name = res.name
                 data.multiplier = res.multiplier
-                data.icon = res.name:sub(1,1) .. " Noob"
+                local displayName = TOWER_NAMES[res.name] or res.name
+                data.icon = displayName
                 data.cost = (res.name == "ALL OUT NOOB") and 300 or 100
+                
                 local btn = barFrame:FindFirstChild("Slot" .. i)
                 if btn then
-                    btn.Text = data.icon .. " (x" .. data.multiplier .. ")\n$" .. data.cost
-                    btn.BackgroundColor3 = TOWER_COLORS[data.name] or TOWER_COLORS["BasicTower"]
+                    btn.Text = "<b>" .. displayName .. "</b>\n$" .. data.cost
+                    btn.BackgroundColor3 = TOWER_COLORS[res.name] or TOWER_COLORS["BasicTower"]
                     btn.BackgroundTransparency = 0
+                    btn.RichText = true
                 end
                 break
             end
         end
+        -- Refresh Gacha overlays immediately
+        for name, overlay in pairs(gachaCards) do
+            local isOwned = false
+            for _, inv in ipairs(towerInventory) do
+                if inv.name == name then isOwned = true break end
+            end
+            overlay.Visible = isOwned
+        end
+        
         gachaFrame.Visible = false
         finalRollBtn.Text = "ROLL NOW (20 PT)"
     else
@@ -418,7 +471,17 @@ rollHUD.Text = "🎲 ROLL (20 PT)"
 rollHUD.Parent = screenGui
 Instance.new("UICorner", rollHUD).CornerRadius = UDim.new(0, 8)
 rollHUD.MouseButton1Click:Connect(function() 
-    if gamePhaseValue.Value == "Lobby" then gachaFrame.Visible = true end 
+    if gamePhaseValue.Value == "Lobby" then 
+        -- Update "Owned" status on Gacha Cards
+        for name, overlay in pairs(gachaCards) do
+            local isOwned = false
+            for _, inv in ipairs(towerInventory) do
+                if inv.name == name then isOwned = true break end
+            end
+            overlay.Visible = isOwned
+        end
+        gachaFrame.Visible = true 
+    end 
 end)
 
 -- Phase Toggling
@@ -432,7 +495,7 @@ local function onPhaseChanged()
     barFrame.Visible = not isLobby
     waveLabel.Visible = not isLobby
     speedButton.Visible = not isLobby
-    voteFrame.Visible = false
+    if not isLobby then voteFrame.Visible = false end -- Only hide on game start
 end
 onPhaseChanged()
 gamePhaseValue.Changed:Connect(onPhaseChanged)

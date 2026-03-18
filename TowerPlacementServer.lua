@@ -5,32 +5,25 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Centralized Events
-local placementEvent = ReplicatedStorage:FindFirstChild("PlaceTowerEvent")
-if not placementEvent then
-	placementEvent = Instance.new("RemoteEvent")
-	placementEvent.Name = "PlaceTowerEvent"
-	placementEvent.Parent = ReplicatedStorage
+-- Centralized Events & Folders (Create them immediately)
+local function getOrCreate(className, name, parent)
+	local existing = parent:FindFirstChild(name)
+	if existing then return existing end
+	local newObj = Instance.new(className)
+	newObj.Name = name
+	newObj.Parent = parent
+	return newObj
 end
 
-local selectEvent = ReplicatedStorage:FindFirstChild("SelectTowerEvent")
-if not selectEvent then
-	-- BindableEvent is perfect for Client-UI to talk to Client-Placement
-	selectEvent = Instance.new("BindableEvent")
-	selectEvent.Name = "SelectTowerEvent"
-	selectEvent.Parent = ReplicatedStorage
-end
+local placementEvent = getOrCreate("RemoteEvent", "PlaceTowerEvent", ReplicatedStorage)
+local upgradeEvent   = getOrCreate("RemoteEvent", "UpgradeTowerEvent", ReplicatedStorage)
+local rollFunction   = getOrCreate("RemoteFunction", "RollTowerFunction", ReplicatedStorage)
+-- BindableEvent is for Client-to-Client communication
+local selectEvent    = getOrCreate("BindableEvent", "SelectTowerEvent", ReplicatedStorage)
 
--- Find or create the folder where towers are stored in Workspace for cleanup
-local workspaceTowers = workspace:FindFirstChild("Towers")
-if not workspaceTowers then
-	workspaceTowers = Instance.new("Folder")
-	workspaceTowers.Name = "Towers"
-	workspaceTowers.Parent = workspace
-end
-
--- Find the folder where tower models are stored in ReplicatedStorage
-local towerFolder = ReplicatedStorage:WaitForChild("Towers")
+local workspaceTowers = getOrCreate("Folder", "Towers", workspace)
+local towerFolder     = ReplicatedStorage:WaitForChild("Towers", 5) or Instance.new("Folder", ReplicatedStorage)
+if towerFolder.Name ~= "Towers" then towerFolder.Name = "Towers" end
 
 -- When the client asks to place a tower, this function runs
 placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition, damageMultiplier)
@@ -76,14 +69,7 @@ placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition,
 	end
 end)
 
--- NEW: Tower Upgrade Logic
-local upgradeEvent = ReplicatedStorage:FindFirstChild("UpgradeTowerEvent")
-if not upgradeEvent then
-	upgradeEvent = Instance.new("RemoteEvent")
-	upgradeEvent.Name = "UpgradeTowerEvent"
-	upgradeEvent.Parent = ReplicatedStorage
-end
-
+-- Tower Upgrade Logic
 upgradeEvent.OnServerEvent:Connect(function(player, towerToUpgrade)
 	if not towerToUpgrade or not towerToUpgrade:IsDescendantOf(workspaceTowers) then return end
 
@@ -100,18 +86,11 @@ upgradeEvent.OnServerEvent:Connect(function(player, towerToUpgrade)
 	end
 end)
 
--- NEW: Gacha Roll Logic
-local rollFunction = ReplicatedStorage:FindFirstChild("RollTowerFunction")
-if not rollFunction then
-	rollFunction = Instance.new("RemoteFunction")
-	rollFunction.Name = "RollTowerFunction"
-	rollFunction.Parent = ReplicatedStorage
-end
-
+-- Gacha Roll Logic
 local AVAILABLE_TOWERS = {"BasicTower", "FastNoob", "StrongNoob", "ALL OUT NOOB"} -- These must exist in RT.Towers
 local ROLL_COST = 20
 
-rollFunction.OnServerInvoke = function(player)
+rollFunction.OnServerInvoke = function(player, ownedTowers)
 	-- RESTRICTION: Only roll in Lobby
 	if _G.GamePhase and _G.GamePhase ~= "Lobby" then
 		return nil
@@ -121,20 +100,47 @@ rollFunction.OnServerInvoke = function(player)
 	local pt = leaderstats and leaderstats:FindFirstChild("PT")
 
 	if pt and pt.Value >= ROLL_COST then
+		-- Use ownedTowers directly from function parameters
+		ownedTowers = ownedTowers or {}
+		
+		-- Filter pool: Basic is never rolled, and exclude already owned
+		local pool = {
+			{name = "ALL OUT NOOB", chance = 5},
+			{name = "StrongNoob", chance = 15},
+			{name = "FastNoob", chance = 30}
+		}
+		
+		local availablePool = {}
+		local totalWeight = 0
+		for _, item in ipairs(pool) do
+			local alreadyOwned = false
+			for _, owned in ipairs(ownedTowers) do
+				if owned == item.name then alreadyOwned = true break end
+			end
+			
+			if not alreadyOwned then
+				table.insert(availablePool, item)
+				totalWeight = totalWeight + item.chance
+			end
+		end
+
+		if #availablePool == 0 then
+			print(player.Name .. " already owns all unique towers!")
+			return nil -- All owned
+		end
+
 		pt.Value = pt.Value - ROLL_COST
 
-		-- Rarity-based selection
-		local roll = math.random(1, 100)
-		local reward = "BasicTower"
-
-		if roll <= 5 then
-			reward = "ALL OUT NOOB" -- 5% chance
-		elseif roll <= 20 then
-			reward = "StrongNoob" -- 15% chance (5 to 20)
-		elseif roll <= 50 then
-			reward = "FastNoob" -- 30% chance (20 to 50)
-		else
-			reward = "BasicTower" -- 50% chance
+		-- Rarity-based selection from available pool
+		local roll = math.random(1, totalWeight)
+		local reward = availablePool[1].name
+		local currentWeight = 0
+		for _, item in ipairs(availablePool) do
+			currentWeight = currentWeight + item.chance
+			if roll <= currentWeight then
+				reward = item.name
+				break
+			end
 		end
 
 		-- RANDOMIZED STATS: 0.8 to 1.5
