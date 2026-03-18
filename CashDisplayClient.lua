@@ -11,6 +11,7 @@ local gamePhaseValue = ReplicatedStorage:WaitForChild("GamePhase")
 -- 1. Create the invisible overlay (ScreenGui)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomCashUI"
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- CRITICAL: Ensures children are on top of parents
 -- Make sure the UI doesn't delete itself when the player dies
 screenGui.ResetOnSpawn = false 
 screenGui.Parent = player:WaitForChild("PlayerGui")
@@ -249,7 +250,13 @@ btnLayout2.VerticalAlignment = Enum.VerticalAlignment.Center
 btnLayout2.Padding = UDim.new(0, 6)
 btnLayout2.Parent = btnRow
 
-local DIFF_COLORS = { Color3.fromRGB(80, 200, 80), Color3.fromRGB(80, 160, 230), Color3.fromRGB(230, 200, 60), Color3.fromRGB(230, 120, 40), Color3.fromRGB(220, 50, 50) }
+local DIFF_COLORS = {
+    Color3.fromRGB(0, 255, 100),   -- Vibrant Green
+    Color3.fromRGB(0, 170, 255),   -- Sky Blue
+    Color3.fromRGB(225, 180, 0),   -- Golden Yellow
+    Color3.fromRGB(255, 120, 0),   -- Vivid Orange
+    Color3.fromRGB(255, 40, 40)    -- Bright Red
+}
 for diff = 1, 5 do
     local btn = Instance.new("TextButton")
     btn.Name = "Diff" .. diff
@@ -259,11 +266,13 @@ for diff = 1, 5 do
     btn.Font = Enum.Font.FredokaOne
     btn.TextSize = 18
     btn.Text = "Lv " .. diff
-    btn.BackgroundTransparency = 0.1
+    btn.BackgroundTransparency = 0 -- Fully opaque for maximum vibrance
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     btn.MouseButton1Click:Connect(function()
         castVoteEvent:FireServer(diff)
-        for _, child in ipairs(btnRow:GetChildren()) do if child:IsA("TextButton") then child.BackgroundTransparency = 0.4 end end
+        for _, child in ipairs(btnRow:GetChildren()) do 
+            if child:IsA("TextButton") then child.BackgroundTransparency = 0.5 end 
+        end
         btn.BackgroundTransparency = 0
     end)
     btn.Parent = btnRow
@@ -274,7 +283,9 @@ onElevatorEvent.OnClientEvent:Connect(function(elevatorName)
         voteFrame.Visible = true
         voteTitle.Text = "LEVEL SELECTION"
         tallyLabel.Text = "Selected: " .. elevatorName .. " | Tap a level!"
-        for _, child in ipairs(btnRow:GetChildren()) do if child:IsA("TextButton") then child.BackgroundTransparency = 0.2 end end
+        for _, child in ipairs(btnRow:GetChildren()) do 
+            if child:IsA("TextButton") then child.BackgroundTransparency = 0 end 
+        end
     else
         voteFrame.Visible = false
     end
