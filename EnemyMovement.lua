@@ -34,12 +34,27 @@ local function moveAlongPath()
         local targetWaypoint = waypoints[i]
         
         if targetWaypoint then
-            -- Tell the Humanoid to walk to the center position of the current waypoint
+            -- Move to waypoint and wait
             humanoid:MoveTo(targetWaypoint.Position)
             
-            -- Pause this script until the Humanoid actually reaches the destination
-            -- (MoveToFinished fires automatically when it arrives)
-            humanoid.MoveToFinished:Wait()
+            -- Wait until reached, but handle stuns
+            while true do
+                local root = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Torso")
+                if not root then break end -- Safety exit
+                
+                local dist = (root.Position - targetWaypoint.Position).Magnitude
+                if dist < 4 then break end -- Reached
+                
+                if enemy:GetAttribute("Stunned") then
+                    humanoid.WalkSpeed = 0
+                    while enemy:GetAttribute("Stunned") do
+                        task.wait(0.5)
+                    end
+                    updateSpeed() -- Resume
+                    humanoid:MoveTo(targetWaypoint.Position) -- Re-issue command
+                end
+                task.wait(0.1)
+            end
         end
     end
     
@@ -56,12 +71,17 @@ local function moveAlongPath()
     enemy:Destroy() -- Remove the enemy from the game
 end
 
--- Update WalkSpeed based on game speed
+-- Update WalkSpeed based on game speed and stun status
 local function updateSpeed()
-    humanoid.WalkSpeed = 16 * gameSpeed.Value
+    if enemy:GetAttribute("Stunned") then
+        humanoid.WalkSpeed = 0
+    else
+        humanoid.WalkSpeed = 16 * gameSpeed.Value
+    end
 end
 
 gameSpeed.Changed:Connect(updateSpeed)
+enemy:GetAttributeChangedSignal("Stunned"):Connect(updateSpeed)
 updateSpeed() -- Initial set
 
 -- Wait 2 seconds to make sure the game has loaded before starting

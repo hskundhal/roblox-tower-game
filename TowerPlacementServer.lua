@@ -32,7 +32,20 @@ placementEvent.OnServerEvent:Connect(function(player, towerName, targetPosition,
 
 	local leaderstats = player:FindFirstChild("leaderstats")
 	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
-	local towerCost = (towerName == "ALL OUT NOOB") and 300 or 100
+	local towerCost = 100
+	if towerName == "ALL OUT NOOB" then
+		towerCost = 300
+	elseif towerName == "TRIPLE PUNCH NOOB" then
+		towerCost = 400
+	elseif towerName == "SUPPORTER NOOB" then
+		towerCost = 400
+	elseif towerName == "FIRE NOOB" then
+		towerCost = 600
+	elseif towerName == "WATER NOOB" then
+		towerCost = 700
+	elseif towerName == "SUMO NOOB" then
+		towerCost = 800
+	end
 
 	if not cash or cash.Value < towerCost then
 		warn(player.Name .. " tried to place a tower but doesn't have enough cash!")
@@ -87,12 +100,13 @@ upgradeEvent.OnServerEvent:Connect(function(player, towerToUpgrade)
 end)
 
 -- Gacha Roll Logic
-local AVAILABLE_TOWERS = {"BasicTower", "FastNoob", "StrongNoob", "ALL OUT NOOB"} -- These must exist in RT.Towers
+local AVAILABLE_TOWERS = {"BasicTower", "FastNoob", "StrongNoob", "ALL OUT NOOB", "TRIPLE PUNCH NOOB", "SUPPORTER NOOB", "FIRE NOOB", "WATER NOOB", "SUMO NOOB"} -- These must exist in RT.Towers
 local ROLL_COST = 20
 
 rollFunction.OnServerInvoke = function(player, ownedTowers)
 	-- RESTRICTION: Only roll in Lobby
 	if _G.GamePhase and _G.GamePhase ~= "Lobby" then
+		print("DEBUG [Roll]: FAILED - Not in Lobby phase!")
 		return nil
 	end
 
@@ -105,6 +119,11 @@ rollFunction.OnServerInvoke = function(player, ownedTowers)
 		
 		-- Filter pool: Basic is never rolled, and exclude already owned
 		local pool = {
+			{name = "SUMO NOOB", chance = 0.01},
+			{name = "WATER NOOB", chance = 0.25},
+			{name = "FIRE NOOB", chance = 0.5},
+			{name = "SUPPORTER NOOB", chance = 1.0},
+			{name = "TRIPLE PUNCH NOOB", chance = 5},
 			{name = "ALL OUT NOOB", chance = 5},
 			{name = "StrongNoob", chance = 15},
 			{name = "FastNoob", chance = 30}
@@ -125,7 +144,7 @@ rollFunction.OnServerInvoke = function(player, ownedTowers)
 		end
 
 		if #availablePool == 0 then
-			print(player.Name .. " already owns all unique towers!")
+			print("DEBUG [Roll]: FAILED - " .. player.Name .. " already owns all unique towers in the pool!")
 			return nil -- All owned
 		end
 
@@ -149,6 +168,7 @@ rollFunction.OnServerInvoke = function(player, ownedTowers)
 		print(player.Name .. " rolled " .. reward .. " with x" .. multiplier .. " damage!")
 		return {name = reward, multiplier = multiplier}
 	else
+		print("DEBUG [Roll]: FAILED - " .. player.Name .. " only has " .. (pt and pt.Value or 0) .. " PT (Needs " .. ROLL_COST .. ")")
 		return nil -- Not enough PT
 	end
 end

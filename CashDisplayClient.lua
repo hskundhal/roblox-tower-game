@@ -140,9 +140,9 @@ speedButton.MouseButton1Click:Connect(function() toggleSpeedEvent:FireServer() e
 local selectEvent = ReplicatedStorage:WaitForChild("SelectTowerEvent")
 local barFrame = Instance.new("Frame")
 barFrame.Name = "TowerBar"
-barFrame.Size = UDim2.new(0, 500, 0, 80)
-barFrame.AnchorPoint = Vector2.new(0, 1)
-barFrame.Position = UDim2.new(0, 20, 1, -20) 
+barFrame.Size = UDim2.new(0, 500, 0, 80) -- BACK TO 500
+barFrame.AnchorPoint = Vector2.new(0.5, 1) -- CENTERED
+barFrame.Position = UDim2.new(0.5, 0, 1, -20) 
 barFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 barFrame.BackgroundTransparency = 0.4
 barFrame.ZIndex = 50 -- On Top of Gacha Screen
@@ -160,6 +160,11 @@ local TOWER_COLORS = {
     ["FastNoob"] = Color3.fromRGB(0, 170, 255),    -- Bright Cyan/Blue
     ["StrongNoob"] = Color3.fromRGB(255, 120, 0),  -- Deep Orange
     ["ALL OUT NOOB"] = Color3.fromRGB(255, 0, 0),  -- True Red
+    ["TRIPLE PUNCH NOOB"] = Color3.fromRGB(200, 0, 255), -- Royal Purple
+    ["SUPPORTER NOOB"] = Color3.fromRGB(255, 255, 0), -- Yellow
+    ["FIRE NOOB"] = Color3.fromRGB(255, 100, 0), -- Orange/Red
+    ["WATER NOOB"] = Color3.fromRGB(0, 100, 255), -- Deep Blue
+    ["SUMO NOOB"] = Color3.fromRGB(150, 75, 0), -- Brown
     ["Locked"] = Color3.fromRGB(15, 15, 15)
 }
 
@@ -167,7 +172,12 @@ local TOWER_NAMES = {
     ["BasicTower"] = "Basic",
     ["FastNoob"] = "Fast",
     ["StrongNoob"] = "Strong",
-    ["ALL OUT NOOB"] = "ALL OUT"
+    ["ALL OUT NOOB"] = "ALL OUT",
+    ["TRIPLE PUNCH NOOB"] = "TRIPLE",
+    ["SUPPORTER NOOB"] = "SUPP",
+    ["FIRE NOOB"] = "FIRE",
+    ["WATER NOOB"] = "WATER",
+    ["SUMO NOOB"] = "SUMO"
 }
 
 local towerInventory = {
@@ -178,10 +188,30 @@ local towerInventory = {
     {name = "Locked", icon = "?", cost = 0, multiplier = 1},
 }
 
+-- Global Collection for Storage
+local globalTowers = {
+    {name = "BasicTower", icon = "Basic", multiplier = 1}
+}
+
+function refreshInventoryUI()
+    for i, data in ipairs(towerInventory) do
+        local slot = barFrame:FindFirstChild("Slot" .. i)
+        if slot then
+            slot.BackgroundColor3 = TOWER_COLORS[data.name] or TOWER_COLORS["Locked"]
+            slot.BackgroundTransparency = (data.name == "Locked") and 0.5 or 0
+            if data.name == "Locked" then
+                slot.Text = "Locked"
+            else
+                slot.Text = "<b>" .. data.icon .. "</b>\n$" .. data.cost
+            end
+        end
+    end
+end
+
 for i, data in ipairs(towerInventory) do
     local slot = Instance.new("TextButton")
     slot.Name = "Slot" .. i
-    slot.Size = UDim2.new(0, 80, 0, 70)
+    slot.Size = UDim2.new(0, 80, 0, 70) -- BACK TO 80
     slot.BackgroundColor3 = TOWER_COLORS[data.name] or TOWER_COLORS["Locked"]
     slot.TextColor3 = Color3.fromRGB(255, 255, 255)
     slot.TextSize = 16
@@ -201,10 +231,12 @@ for i, data in ipairs(towerInventory) do
     slot.Parent = barFrame
 end
 
--- Elevator Vote UI
-local onElevatorEvent = ReplicatedStorage:WaitForChild("OnElevatorEvent")
-local castVoteEvent   = ReplicatedStorage:WaitForChild("CastVoteEvent")
-local voteUpdateEvent = ReplicatedStorage:WaitForChild("VoteUpdateEvent")
+-- Elevator Vote UI (Optional - only if events exist)
+local onElevatorEvent = ReplicatedStorage:FindFirstChild("OnElevatorEvent")
+local castVoteEvent   = ReplicatedStorage:FindFirstChild("CastVoteEvent")
+local voteUpdateEvent = ReplicatedStorage:FindFirstChild("VoteUpdateEvent")
+
+if onElevatorEvent and castVoteEvent and voteUpdateEvent then
 
 local voteFrame = Instance.new("Frame")
 voteFrame.Name = "VoteFrame"
@@ -291,17 +323,20 @@ onElevatorEvent.OnClientEvent:Connect(function(elevatorName)
     end
 end)
 
-voteUpdateEvent.OnClientEvent:Connect(function(tally, timerSecs)
-    local parts = {}
-    for d = 1, 5 do if tally[d] and tally[d] > 0 then table.insert(parts, "Lv" .. d .. ":" .. tally[d]) end end
-    tallyLabel.Text = "⏱ " .. timerSecs .. "s  " .. (#parts > 0 and table.concat(parts, "  ") or "")
-end)
+    voteUpdateEvent.OnClientEvent:Connect(function(tally, timerSecs)
+        local parts = {}
+        for d = 1, 5 do if tally[d] and tally[d] > 0 then table.insert(parts, "Lv" .. d .. ":" .. tally[d]) end end
+        tallyLabel.Text = "⏱ " .. timerSecs .. "s  " .. (#parts > 0 and table.concat(parts, "  ") or "")
+    end)
+else
+    warn("Elevator events not found! Skipping Elevator UI.")
+end
 
 -- GACHA / ROLL SCREEN UI
 local rollFunction = ReplicatedStorage:WaitForChild("RollTowerFunction")
 local gachaFrame = Instance.new("Frame")
 gachaFrame.Name = "GachaScreen"
-gachaFrame.Size = UDim2.new(0, 600, 0, 450)
+gachaFrame.Size = UDim2.new(0, 800, 0, 450) -- WIDER GACHA
 gachaFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 gachaFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 gachaFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -351,9 +386,14 @@ optLayout.Padding = UDim.new(0, 15)
 optLayout.Parent = optionsContainer
 
 local REWARDS_DATA = {
-    {name = "FastNoob", chance = "60%", color = Color3.fromRGB(80, 160, 230)},
+    {name = "FastNoob", chance = "55%", color = Color3.fromRGB(80, 160, 230)},
     {name = "StrongNoob", chance = "30%", color = Color3.fromRGB(230, 120, 40)},
-    {name = "ALL OUT NOOB", chance = "10%", color = Color3.fromRGB(255, 50, 50)}
+    {name = "ALL OUT NOOB", chance = "10%", color = Color3.fromRGB(255, 50, 50)},
+    {name = "TRIPLE PUNCH NOOB", chance = "5%", color = Color3.fromRGB(200, 0, 255)},
+    {name = "SUPPORTER NOOB", chance = "1%", color = Color3.fromRGB(255, 255, 0)},
+    {name = "FIRE NOOB", chance = "0.5%", color = Color3.fromRGB(255, 100, 0)},
+    {name = "WATER NOOB", chance = "0.25%", color = Color3.fromRGB(0, 100, 255)},
+    {name = "SUMO NOOB", chance = "0.01%", color = Color3.fromRGB(150, 75, 0)}
 }
 
 local gachaCards = {}
@@ -361,7 +401,7 @@ local gachaCards = {}
 for _, data in ipairs(REWARDS_DATA) do
     local card = Instance.new("Frame")
     card.Name = data.name
-    card.Size = UDim2.new(0, 180, 1, 0)
+    card.Size = UDim2.new(0, 85, 1, 0) -- SMALLER CARDS
     card.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     card.ZIndex = 22
     card.Parent = optionsContainer
@@ -425,37 +465,41 @@ finalRollBtn.Parent = gachaFrame
 Instance.new("UICorner", finalRollBtn).CornerRadius = UDim.new(0, 30)
 
 finalRollBtn.MouseButton1Click:Connect(function()
-    local currentOwned = {}
-    for _, item in ipairs(towerInventory) do
-        if item.name ~= "Locked" then table.insert(currentOwned, item.name) end
+    local currentOwnedNames = {}
+    for _, item in ipairs(globalTowers) do
+        table.insert(currentOwnedNames, item.name)
     end
 
-    local res = rollFunction:InvokeServer(currentOwned)
+    local res = rollFunction:InvokeServer(currentOwnedNames)
     if res then
         finalRollBtn.Text = "SUCCESS!"
         task.wait(0.5)
+        
+        -- Add to Global Towers
+        local displayName = TOWER_NAMES[res.name] or res.name
+        table.insert(globalTowers, {name = res.name, icon = displayName, multiplier = res.multiplier})
+        
+        -- Auto-fill empty slot if available
         for i, data in ipairs(towerInventory) do
             if data.name == "Locked" then
                 data.name = res.name
                 data.multiplier = res.multiplier
-                local displayName = TOWER_NAMES[res.name] or res.name
                 data.icon = displayName
-                data.cost = (res.name == "ALL OUT NOOB") and 300 or 100
-                
-                local btn = barFrame:FindFirstChild("Slot" .. i)
-                if btn then
-                    btn.Text = "<b>" .. displayName .. "</b>\n$" .. data.cost
-                    btn.BackgroundColor3 = TOWER_COLORS[res.name] or TOWER_COLORS["BasicTower"]
-                    btn.BackgroundTransparency = 0
-                    btn.RichText = true
-                end
+                data.cost = 100
+                if res.name == "ALL OUT NOOB" then data.cost = 300
+                elseif res.name == "TRIPLE PUNCH NOOB" or res.name == "SUPPORTER NOOB" then data.cost = 400 
+                elseif res.name == "FIRE NOOB" then data.cost = 600
+                elseif res.name == "WATER NOOB" then data.cost = 700
+                elseif res.name == "SUMO NOOB" then data.cost = 800 end
                 break
             end
         end
+        refreshInventoryUI()
+        
         -- Refresh Gacha overlays immediately
         for name, overlay in pairs(gachaCards) do
             local isOwned = false
-            for _, inv in ipairs(towerInventory) do
+            for _, inv in ipairs(globalTowers) do
                 if inv.name == name then isOwned = true break end
             end
             overlay.Visible = isOwned
@@ -470,23 +514,110 @@ finalRollBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- STORAGE UI
+local storageFrame = Instance.new("Frame")
+storageFrame.Name = "StorageScreen"
+storageFrame.Size = UDim2.new(0, 500, 0, 400)
+storageFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+storageFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+storageFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+storageFrame.Visible = false
+storageFrame.ZIndex = 100
+storageFrame.Parent = screenGui
+Instance.new("UICorner", storageFrame).CornerRadius = UDim.new(0, 20)
+Instance.new("UIStroke", storageFrame).Thickness = 2
+
+local storageTitle = Instance.new("TextLabel")
+storageTitle.Size = UDim2.new(1, 0, 0, 50)
+storageTitle.BackgroundTransparency = 1
+storageTitle.Font = Enum.Font.FredokaOne
+storageTitle.TextSize = 28
+storageTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+storageTitle.Text = "MY COLLECTION"
+storageTitle.Parent = storageFrame
+
+local storageClose = closeBtn:Clone()
+storageClose.Parent = storageFrame
+storageClose.MouseButton1Click:Connect(function() storageFrame.Visible = false end)
+
+local storageList = Instance.new("ScrollingFrame")
+storageList.Size = UDim2.new(1, -20, 1, -70)
+storageList.Position = UDim2.new(0, 10, 0, 60)
+storageList.BackgroundTransparency = 1
+storageList.CanvasSize = UDim2.new(0, 0, 0, 0)
+storageList.ScrollBarThickness = 6
+storageList.Parent = storageFrame
+local sLayout = Instance.new("UIGridLayout")
+sLayout.CellSize = UDim2.new(0, 100, 0, 100)
+sLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+sLayout.Parent = storageList
+
+function refreshStorageUI()
+    for _, child in ipairs(storageList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    for _, data in ipairs(globalTowers) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 100, 0, 100)
+        btn.BackgroundColor3 = TOWER_COLORS[data.name] or TOWER_COLORS["BasicTower"]
+        btn.Font = Enum.Font.FredokaOne
+        btn.TextSize = 14
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Text = "<b>" .. data.icon .. "</b>\nx" .. data.multiplier
+        btn.RichText = true
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+        
+        btn.MouseButton1Click:Connect(function()
+            -- Swap into first available Locked slot, or Slot 5 if all full
+            local targetIdx = 5
+            for i = 2, 5 do
+                if towerInventory[i].name == "Locked" then targetIdx = i break end
+            end
+            
+            -- Set new tower data
+            local newCost = 100
+            if data.name == "ALL OUT NOOB" then newCost = 300
+            elseif data.name == "TRIPLE PUNCH NOOB" or data.name == "SUPPORTER NOOB" then newCost = 400 
+            elseif data.name == "FIRE NOOB" then newCost = 600
+            elseif data.name == "WATER NOOB" then newCost = 700
+            elseif data.name == "SUMO NOOB" then newCost = 800 end
+            
+            towerInventory[targetIdx] = {
+                name = data.name,
+                icon = data.icon,
+                cost = newCost,
+                multiplier = data.multiplier
+            }
+            refreshInventoryUI()
+            storageFrame.Visible = false
+        end)
+        btn.Parent = storageList
+    end
+    storageList.CanvasSize = UDim2.new(0, 0, 0, sLayout.AbsoluteContentSize.Y)
+end
+
 local rollHUD = Instance.new("TextButton")
 rollHUD.Size = UDim2.new(0, 150, 0, 40)
 rollHUD.AnchorPoint = Vector2.new(1, 1)
 rollHUD.Position = UDim2.new(1, -20, 1, -20)
-rollHUD.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-rollHUD.TextColor3 = Color3.fromRGB(255, 255, 255)
+rollHUD.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
 rollHUD.Font = Enum.Font.FredokaOne
-rollHUD.TextSize = 20
+rollHUD.TextSize = 18
+rollHUD.TextColor3 = Color3.fromRGB(255, 255, 255)
 rollHUD.Text = "🎲 ROLL (20 PT)"
+rollHUD.ZIndex = 30
+rollHUD.Visible = (gamePhaseValue.Value == "Lobby") -- Set initial visibility explicitly
 rollHUD.Parent = screenGui
-Instance.new("UICorner", rollHUD).CornerRadius = UDim.new(0, 8)
-rollHUD.MouseButton1Click:Connect(function() 
-    if gamePhaseValue.Value == "Lobby" then 
+Instance.new("UICorner", rollHUD).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", rollHUD).Thickness = 2
+
+rollHUD.MouseButton1Click:Connect(function()
+    if gamePhaseValue.Value == "Lobby" then
         -- Update "Owned" status on Gacha Cards
         for name, overlay in pairs(gachaCards) do
             local isOwned = false
-            for _, inv in ipairs(towerInventory) do
+            for _, inv in ipairs(globalTowers) do
                 if inv.name == name then isOwned = true break end
             end
             overlay.Visible = isOwned
@@ -495,12 +626,28 @@ rollHUD.MouseButton1Click:Connect(function()
     end 
 end)
 
+-- STORAGE HUD (Cloned from Roll HUD)
+local storageHUD = rollHUD:Clone()
+storageHUD.Name = "StorageHUD"
+storageHUD.Text = "📦 STORAGE"
+storageHUD.Position = UDim2.new(1, -180, 1, -20)
+storageHUD.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+storageHUD.Visible = (gamePhaseValue.Value == "Lobby") -- Set initial visibility explicitly
+storageHUD.Parent = screenGui
+storageHUD.MouseButton1Click:Connect(function()
+    if gamePhaseValue.Value == "Lobby" then
+        refreshStorageUI()
+        storageFrame.Visible = true
+    end
+end)
+
 -- Phase Toggling
 local function onPhaseChanged()
     local phase = gamePhaseValue.Value
     local isLobby = (phase == "Lobby")
     ptLabel.Visible = true
     rollHUD.Visible = isLobby
+    storageHUD.Visible = isLobby
     cashLabel.Visible = not isLobby
     healthLabel.Visible = not isLobby
     barFrame.Visible = not isLobby

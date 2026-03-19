@@ -58,10 +58,10 @@ end)
 
 -- Teleport player to Lobby on join
 Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function(character)
+	player.CharacterAppearanceLoaded:Connect(function(character)
 		local lobbySpawn = workspace:FindFirstChild("LobbySpawn")
 		if lobbySpawn then
-			task.wait(0.1) -- Wait for character to fully load
+			task.wait(0.5) -- Ensure physics are ready
 			character:PivotTo(lobbySpawn.CFrame + Vector3.new(0, 5, 0))
 		end
 	end)
@@ -133,7 +133,7 @@ Players.PlayerAdded:Connect(function(player)
 	
 	local pt = Instance.new("IntValue")
 	pt.Name = "PT"
-	pt.Value = 0
+	pt.Value = 500
 	pt.Parent = leaderstats
 end)
 

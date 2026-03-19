@@ -9,7 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MAX_PLAYERS  = 3
 local COUNTDOWN_TIME = 15   -- Seconds to vote before game starts
 local ELEVATORS_FOLDER_NAME = "Elevators"
-local SCAN_RATE = 0.5       -- Seconds between presence scans
+local SCAN_RATE = 0.2       -- Faster scan for better detection
 
 -- ── RemoteEvents ─────────────────────────────────────────────────────────────
 local function getOrCreate(name, class)
