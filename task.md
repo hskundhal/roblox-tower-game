@@ -23,10 +23,10 @@ The game is a Tower Defense game with a Lobby and a Combat map.
   - Global collection (`globalTowers`) stores all owned units.
   - Storage UI for swapping units.
 - **Enemy Movement Fix**: Enemies now use `HumanoidRootPart` instead of `PrimaryPart` to avoid navigation hangs.
-- **Lobby Phase Fix**: Improved spawn reliability while keeping original elevator flow (`MAX_PLAYERS = 3`, no mandatory delay).
+- **UI Robustness**: Moved core HUD to script top to prevent crashes in complex modules from hiding basic buttons.
 
 ## To-Do / Issues
-- [x] Fix Lobby Spawn skip (Game starts immediately).
+- [x] Fix Enemy Stalling/Piling (Disabled collisions + MoveTo retry).
 - [ ] Implement Save/Load for Tower Storage.
 - [ ] Add more Maps/Levels.
 - [ ] Balance Sumo and Water Noob stats.

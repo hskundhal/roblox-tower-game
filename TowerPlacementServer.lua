@@ -150,8 +150,8 @@ rollFunction.OnServerInvoke = function(player, ownedTowers)
 
 		pt.Value = pt.Value - ROLL_COST
 
-		-- Rarity-based selection from available pool
-		local roll = math.random(1, totalWeight)
+		-- Rarity-based selection: use math.random() * totalWeight for decimal support
+		local roll = math.random() * totalWeight
 		local reward = availablePool[1].name
 		local currentWeight = 0
 		for _, item in ipairs(availablePool) do

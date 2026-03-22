@@ -8,15 +8,17 @@ local player = Players.LocalPlayer
 -- Shared Game Phase (synced with server)
 local gamePhaseValue = ReplicatedStorage:WaitForChild("GamePhase")
 
+local gamePhaseValue = ReplicatedStorage:WaitForChild("GamePhase")
+local ptValue = player:WaitForChild("leaderstats"):WaitForChild("PT")
+
 -- 1. Create the invisible overlay (ScreenGui)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomCashUI"
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- CRITICAL: Ensures children are on top of parents
--- Make sure the UI doesn't delete itself when the player dies
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.ResetOnSpawn = false 
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- 2. Create the labels (Cash, PT, Health, Wave)
+-- 2. CORE HUD ELEMENTS (Create these FIRST so they don't break on script errors)
 local cashLabel = Instance.new("TextLabel")
 cashLabel.Name = "CashLabel"
 cashLabel.Size = UDim2.new(0, 250, 0, 50) 
@@ -27,11 +29,8 @@ cashLabel.BackgroundTransparency = 0.2
 cashLabel.TextColor3 = Color3.fromRGB(85, 255, 127)
 cashLabel.Font = Enum.Font.FredokaOne 
 cashLabel.TextSize = 28
-cashLabel.TextStrokeTransparency = 0 
-local cashCorner = Instance.new("UICorner")
-cashCorner.CornerRadius = UDim.new(0, 10)
-cashCorner.Parent = cashLabel
 cashLabel.Parent = screenGui
+Instance.new("UICorner", cashLabel).CornerRadius = UDim.new(0, 10)
 
 local ptLabel = Instance.new("TextLabel")
 ptLabel.Name = "PTLabel"
@@ -43,11 +42,34 @@ ptLabel.BackgroundTransparency = 0.2
 ptLabel.TextColor3 = Color3.fromRGB(255, 255, 127) 
 ptLabel.Font = Enum.Font.FredokaOne 
 ptLabel.TextSize = 28
-ptLabel.TextStrokeTransparency = 0 
-local ptCorner = Instance.new("UICorner")
-ptCorner.CornerRadius = UDim.new(0, 10)
-ptCorner.Parent = ptLabel
 ptLabel.Parent = screenGui
+Instance.new("UICorner", ptLabel).CornerRadius = UDim.new(0, 10)
+
+local rollHUD = Instance.new("TextButton")
+rollHUD.Name = "RollHUD"
+rollHUD.Size = UDim2.new(0, 150, 0, 40)
+rollHUD.AnchorPoint = Vector2.new(1, 1)
+rollHUD.Position = UDim2.new(1, -20, 1, -20)
+rollHUD.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+rollHUD.Font = Enum.Font.FredokaOne
+rollHUD.TextSize = 18
+rollHUD.TextColor3 = Color3.fromRGB(255, 255, 255)
+rollHUD.Text = "🎲 ROLL (20 PT)"
+rollHUD.ZIndex = 30
+rollHUD.Visible = (gamePhaseValue.Value == "Lobby")
+rollHUD.Parent = screenGui
+Instance.new("UICorner", rollHUD).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", rollHUD).Thickness = 2
+
+local storageHUD = rollHUD:Clone()
+storageHUD.Name = "StorageHUD"
+storageHUD.Text = "📦 STORAGE"
+storageHUD.Position = UDim2.new(1, -180, 1, -20)
+storageHUD.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+storageHUD.Visible = (gamePhaseValue.Value == "Lobby")
+storageHUD.Parent = screenGui
+
+-- (Rest of the script follows...)
 
 local healthLabel = Instance.new("TextLabel")
 healthLabel.Name = "HealthLabel"
@@ -615,29 +637,23 @@ Instance.new("UIStroke", rollHUD).Thickness = 2
 rollHUD.MouseButton1Click:Connect(function()
     if gamePhaseValue.Value == "Lobby" then
         -- Update "Owned" status on Gacha Cards
-        for name, overlay in pairs(gachaCards) do
-            local isOwned = false
-            for _, inv in ipairs(globalTowers) do
-                if inv.name == name then isOwned = true break end
+        if gachaCards then
+            for name, overlay in pairs(gachaCards) do
+                local isOwned = false
+                for _, inv in ipairs(globalTowers) do
+                    if inv.name == name then isOwned = true break end
+                end
+                overlay.Visible = isOwned
             end
-            overlay.Visible = isOwned
         end
-        gachaFrame.Visible = true 
+        if gachaFrame then gachaFrame.Visible = true end
     end 
 end)
 
--- STORAGE HUD (Cloned from Roll HUD)
-local storageHUD = rollHUD:Clone()
-storageHUD.Name = "StorageHUD"
-storageHUD.Text = "📦 STORAGE"
-storageHUD.Position = UDim2.new(1, -180, 1, -20)
-storageHUD.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-storageHUD.Visible = (gamePhaseValue.Value == "Lobby") -- Set initial visibility explicitly
-storageHUD.Parent = screenGui
 storageHUD.MouseButton1Click:Connect(function()
     if gamePhaseValue.Value == "Lobby" then
-        refreshStorageUI()
-        storageFrame.Visible = true
+        if refreshStorageUI then refreshStorageUI() end
+        if storageFrame then storageFrame.Visible = true end
     end
 end)
 

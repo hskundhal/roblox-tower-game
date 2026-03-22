@@ -25,35 +25,47 @@ for _, waypoint in ipairs(waypointsFolder:GetChildren()) do
     end
 end
 
+-- Disable collisions between enemies to prevent piling up
+for _, part in ipairs(enemy:GetDescendants()) do
+    if part:IsA("BasePart") then
+        part.CanCollide = false
+    end
+end
+
 -- Function to make the enemy walk through each waypoint sequentially
 local function moveAlongPath()
     print("Enemy is starting to move!")
     
-    -- Loop through our sorted waypoints list from 1 to the end
     for i = 1, #waypoints do
         local targetWaypoint = waypoints[i]
-        
         if targetWaypoint then
-            -- Move to waypoint and wait
+            local retryTimer = 0
             humanoid:MoveTo(targetWaypoint.Position)
             
-            -- Wait until reached, but handle stuns
             while true do
                 local root = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Torso")
-                if not root then break end -- Safety exit
+                if not root then break end
                 
                 local dist = (root.Position - targetWaypoint.Position).Magnitude
-                if dist < 4 then break end -- Reached
+                if dist < 4 then break end 
                 
+                -- Handle Stuns
                 if enemy:GetAttribute("Stunned") then
                     humanoid.WalkSpeed = 0
-                    while enemy:GetAttribute("Stunned") do
-                        task.wait(0.5)
-                    end
-                    updateSpeed() -- Resume
-                    humanoid:MoveTo(targetWaypoint.Position) -- Re-issue command
+                    while enemy:GetAttribute("Stunned") do task.wait(0.5) end
+                    updateSpeed() 
+                    humanoid:MoveTo(targetWaypoint.Position)
+                    retryTimer = 0
                 end
-                task.wait(0.1)
+                
+                -- Robustness: Re-issue MoveTo every 2 seconds if stuck
+                retryTimer = retryTimer + 0.2
+                if retryTimer >= 2 then
+                    humanoid:MoveTo(targetWaypoint.Position)
+                    retryTimer = 0
+                end
+                
+                task.wait(0.2)
             end
         end
     end
